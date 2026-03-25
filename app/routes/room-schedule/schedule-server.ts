@@ -21,6 +21,48 @@ import type {
   ScheduleBooking,
 } from "./schedule-types";
 
+function normalizeCalendarSummary(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function findCalendarForRoom(
+  room: (typeof ROOMS)[number],
+  calendars: calendar_v3.Schema$CalendarListEntry[],
+) {
+  const expectedSummary = normalizeCalendarSummary(room.calendarSummary);
+  const expectedName = normalizeCalendarSummary(room.name);
+  let fallbackMatch: calendar_v3.Schema$CalendarListEntry | undefined;
+
+  for (const calendarListEntry of calendars) {
+    if (calendarListEntry.primary || typeof calendarListEntry.summary !== "string") {
+      continue;
+    }
+
+    const normalizedSummary = normalizeCalendarSummary(calendarListEntry.summary);
+
+    if (normalizedSummary === expectedSummary) {
+      return calendarListEntry;
+    }
+
+    if (
+      !fallbackMatch &&
+      (normalizedSummary === expectedName ||
+        normalizedSummary.startsWith(expectedName) ||
+        normalizedSummary.includes(expectedName))
+    ) {
+      fallbackMatch = calendarListEntry;
+    }
+  }
+
+  return fallbackMatch;
+}
+
 function isRoomCalendarEntry(
   roomCalendar: RoomCalendarCandidate,
 ): roomCalendar is RoomCalendarEntry {
@@ -42,10 +84,7 @@ async function loadRoomCalendars(googleTokens: GoogleSessionTokens) {
   const allCalendars: calendar_v3.Schema$CalendarListEntry[] =
     calendarListResponse.data.items ?? [];
   const roomCalendars: RoomCalendarCandidate[] = ROOMS.map((room) => {
-    const match = allCalendars.find(
-      (calendarListEntry) =>
-        calendarListEntry.summary === room.calendarSummary && !calendarListEntry.primary,
-    );
+    const match = findCalendarForRoom(room, allCalendars);
 
     return {
       accessRole: match?.accessRole ?? "reader",
