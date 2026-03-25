@@ -70,7 +70,7 @@ export const ROOMS: Room[] = [
 
 function getTodayStr() {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return `${String(d.getFullYear())}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 const today = getTodayStr();
@@ -155,5 +155,5 @@ export const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 8am to 5pm
 export function formatHour(h: number) {
   const suffix = h >= 12 ? "PM" : "AM";
   const display = h > 12 ? h - 12 : h === 0 ? 12 : h;
-  return `${display}:00 ${suffix}`;
+  return `${String(display)}:00 ${suffix}`;
 }
