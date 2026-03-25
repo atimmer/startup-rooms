@@ -500,35 +500,37 @@ export function SchedulePage() {
                   <span />
                 )}
 
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  type="button"
-                  onClick={closeModal}
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  size="lg"
-                  disabled={isSubmitting}
-                  style={{ backgroundColor: ACCENT }}
-                  name="intent"
-                  type="submit"
-                  value={modalState.values.intent}
-                >
-                  {isSubmitting
-                    ? submittedIntent === "create"
-                      ? "Creating..."
-                      : submittedIntent === "update"
-                        ? "Saving..."
-                        : modalState.kind === "create"
-                          ? "Creating..."
-                          : "Saving..."
-                    : modalState.kind === "create"
-                      ? "Create booking"
-                      : "Save changes"}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="lg"
+                    type="button"
+                    onClick={closeModal}
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="lg"
+                    disabled={isSubmitting}
+                    style={{ backgroundColor: ACCENT }}
+                    name="intent"
+                    type="submit"
+                    value={modalState.values.intent}
+                  >
+                    {isSubmitting
+                      ? submittedIntent === "create"
+                        ? "Creating..."
+                        : submittedIntent === "update"
+                          ? "Saving..."
+                          : modalState.kind === "create"
+                            ? "Creating..."
+                            : "Saving..."
+                      : modalState.kind === "create"
+                        ? "Create booking"
+                        : "Save changes"}
+                  </Button>
+                </div>
               </div>
             </Form>
           </DialogContent>
