@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+
+if [ -z "${CODEX_CI-}" ] && [ -z "${CLAUDECODE-}" ] && [ -z "${CURSOR_AGENT-}" ]; then
+  exit 0
+fi
+
+fail=0
+pnpm presubmit || fail=1
+
+if [ "$fail" -ne 0 ]; then
+  echo "IMPORTANT: These commands might fail when the generation commands haven't been run. So make sure to run \`pnpm --filter ucms generate:types\` and \`pnpm run --filter=@repo/payload-cms-client regenerate\` now."
+  exit 1
+fi
