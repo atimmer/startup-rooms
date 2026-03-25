@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useLoaderData } from "react-router";
+import {
+  Form,
+  Link,
+  redirect,
+  useActionData,
+  useLoaderData,
+  useNavigation,
+  useSearchParams,
+} from "react-router";
+import type { calendar_v3 } from "googleapis";
 
 import { HOURS, ROOMS, formatHour, type Booking } from "../data/rooms";
 import type { Route } from "./+types/design7";
@@ -40,6 +49,67 @@ const ROOM_COLORS: Record<string, { bg: string; border: string; text: string }> 
   doornroosje: { bg: "#F1EAFE", border: "#B090FF", text: "#6D28D9" },
 };
 
+interface GoogleSessionTokens {
+  accessToken?: string;
+  expiryDate?: number;
+  refreshToken: string;
+  scope?: string;
+  tokenType?: string;
+}
+
+interface ScheduleBooking extends Booking {
+  calendarId: string;
+  endLocal: string;
+  startLocal: string;
+}
+
+interface RoomCalendarCandidate {
+  accessRole: string;
+  calendarId: string | null;
+  room: (typeof ROOMS)[number];
+}
+
+interface RoomCalendarEntry {
+  accessRole: string;
+  calendarId: string;
+  room: (typeof ROOMS)[number];
+}
+
+interface LoaderData {
+  bookings: ScheduleBooking[];
+  headers: { "Set-Cookie": string } | null;
+  isAuthenticated: boolean;
+  roomCalendarIds: Record<string, string>;
+  roomCount: number;
+}
+
+interface ModalValues {
+  bookingId?: string;
+  endLocal: string;
+  intent: "create" | "update";
+  originalRoomId?: string;
+  roomId: string;
+  startLocal: string;
+  title: string;
+}
+
+interface ActionData {
+  defaultValues?: ModalValues;
+  error: string;
+}
+
+type ModalState =
+  | {
+      kind: "create";
+      values: ModalValues;
+    }
+  | {
+      booking: ScheduleBooking;
+      kind: "edit";
+      values: ModalValues;
+    }
+  | null;
+
 function getColor(roomId: string) {
   return ROOM_COLORS[roomId] ?? { bg: "#F3F4F6", border: "#9CA3AF", text: "#374151" };
 }
@@ -71,18 +141,22 @@ function formatBookingWindow(startHour: number, endHour: number) {
   return `${formatHour(startHour)} - ${formatHour(endHour)}`;
 }
 
-function getTimeZoneOffsetLabel(date: Date) {
+function getOffsetLabelForTimeZone(timeZone: string, date: Date) {
   const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: GOOGLE_CALENDAR_TIME_ZONE,
+    timeZone,
     timeZoneName: "longOffset",
   }).formatToParts(date);
   const offset = parts.find((part) => part.type === "timeZoneName")?.value;
 
   if (!offset) {
-    throw new Error("Unable to determine Amsterdam time zone offset.");
+    throw new Error(`Unable to determine time zone offset for ${timeZone}.`);
   }
 
   return offset.replace("GMT", "");
+}
+
+function getTimeZoneOffsetLabel(date: Date) {
+  return getOffsetLabelForTimeZone(GOOGLE_CALENDAR_TIME_ZONE, date);
 }
 
 function getAmsterdamDayBounds() {
@@ -132,53 +206,153 @@ function clampHour(value: number) {
   return Math.min(Math.max(value, min), max);
 }
 
-interface LoaderData {
-  bookings: Booking[];
-  isAuthenticated: boolean;
-  roomCount: number;
-}
+function formatDateTimeLocalInTimeZone(value: string, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("sv-SE", {
+    day: "2-digit",
+    hour: "2-digit",
+    hour12: false,
+    minute: "2-digit",
+    month: "2-digit",
+    timeZone,
+    year: "numeric",
+  }).formatToParts(new Date(value));
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+  const hour = parts.find((part) => part.type === "hour")?.value;
+  const minute = parts.find((part) => part.type === "minute")?.value;
 
-export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData> {
-  const [{ createAuthorizedCalendarClient }, { getSession, readGoogleSession }] = await Promise.all(
-    [import("../lib/google.server"), import("../lib/session.server")],
-  );
-  const session = await getSession(request);
-  const googleSession = readGoogleSession(session);
-
-  if (!googleSession) {
-    return {
-      bookings: [],
-      isAuthenticated: false,
-      roomCount: ROOMS.length,
-    };
+  if (!year || !month || !day || !hour || !minute) {
+    throw new Error(`Unable to format date time value: ${value}`);
   }
 
-  const { calendar } = await createAuthorizedCalendarClient(googleSession.googleTokens);
-  const { date, timeMax, timeMin } = getAmsterdamDayBounds();
+  return `${year}-${month}-${day}T${hour}:${minute}`;
+}
+
+function createDefaultBookingValues(roomId?: string) {
+  const { date } = getAmsterdamDayBounds();
+  const fallbackRoomId = ROOMS[0]?.id ?? "";
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    hour12: false,
+    timeZone: GOOGLE_CALENDAR_TIME_ZONE,
+  }).formatToParts(now);
+  const hourValue = parts.find((part) => part.type === "hour")?.value;
+
+  if (!hourValue) {
+    throw new Error("Unable to determine current Amsterdam hour.");
+  }
+
+  const nowHour = Number(hourValue);
+  const minHour = HOURS[0];
+  const maxHour = HOURS[HOURS.length - 1];
+  const startHour = Math.min(Math.max(nowHour + 1, minHour), maxHour);
+  const endHour = Math.min(startHour + 1, maxHour + 1);
+
+  return {
+    endLocal: `${date}T${String(endHour).padStart(2, "0")}:00`,
+    intent: "create" as const,
+    roomId: roomId ?? fallbackRoomId,
+    startLocal: `${date}T${String(startHour).padStart(2, "0")}:00`,
+    title: "",
+  } satisfies ModalValues;
+}
+
+function parseDateTimeLocal(value: FormDataEntryValue | null) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(trimmed)) {
+    return null;
+  }
+
+  return trimmed;
+}
+
+function convertDateTimeLocalToTimeZoneIso(value: string, timeZone: string) {
+  const date = new Date(`${value}:00Z`);
+  const offset = getOffsetLabelForTimeZone(timeZone, date);
+
+  return `${value}:00${offset}`;
+}
+
+function isRoomCalendarEntry(
+  roomCalendar: RoomCalendarCandidate,
+): roomCalendar is RoomCalendarEntry {
+  return typeof roomCalendar.calendarId === "string";
+}
+
+function getRoomCalendarEntries(roomCalendars: RoomCalendarCandidate[]) {
+  return roomCalendars.filter(isRoomCalendarEntry);
+}
+
+async function loadRoomCalendars(googleTokens: GoogleSessionTokens) {
+  const { createAuthorizedCalendarClient } = await import("../lib/google.server");
+  const { calendar, refreshedTokens } = await createAuthorizedCalendarClient(googleTokens);
   const calendarListResponse = await calendar.calendarList.list({
     minAccessRole: "reader",
     showDeleted: false,
     showHidden: false,
   });
-  const allCalendars = calendarListResponse.data.items ?? [];
-  const roomCalendars = ROOMS.map((room) => {
+  const allCalendars: calendar_v3.Schema$CalendarListEntry[] =
+    calendarListResponse.data.items ?? [];
+  const roomCalendars: RoomCalendarCandidate[] = ROOMS.map((room) => {
     const match = allCalendars.find(
       (calendarListEntry) =>
         calendarListEntry.summary === room.calendarSummary && !calendarListEntry.primary,
     );
 
     return {
+      accessRole: match?.accessRole ?? "reader",
       calendarId: match?.id ?? null,
       room,
     };
-  }).filter((entry) => entry.calendarId !== null);
+  });
 
+  return {
+    calendar,
+    refreshedTokens,
+    roomCalendars: getRoomCalendarEntries(roomCalendars),
+  };
+}
+
+function buildRoomCalendarIds(roomCalendars: RoomCalendarEntry[]) {
+  return roomCalendars.reduce<Record<string, string>>((accumulator, entry) => {
+    accumulator[entry.room.id] = entry.calendarId;
+    return accumulator;
+  }, {});
+}
+
+export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData> {
+  const [{ commitSession, getSession, readGoogleSession }] = await Promise.all([
+    import("../lib/session.server"),
+  ]);
+  const session = await getSession(request);
+  const googleSession = readGoogleSession(session);
+
+  if (!googleSession) {
+    const emptyBookings: ScheduleBooking[] = [];
+
+    return {
+      bookings: emptyBookings,
+      headers: null,
+      isAuthenticated: false,
+      roomCalendarIds: {},
+      roomCount: ROOMS.length,
+    } satisfies LoaderData;
+  }
+
+  const { calendar, refreshedTokens, roomCalendars } = await loadRoomCalendars(
+    googleSession.googleTokens,
+  );
+  const { date, timeMax, timeMin } = getAmsterdamDayBounds();
+  const roomCalendarIds = buildRoomCalendarIds(roomCalendars);
   const bookingGroups = await Promise.all(
     roomCalendars.map(async ({ calendarId, room }) => {
-      if (!calendarId) {
-        return [];
-      }
-
       const eventsResponse = await calendar.events.list({
         calendarId,
         maxResults: 50,
@@ -189,52 +363,228 @@ export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData>
         timeZone: GOOGLE_CALENDAR_TIME_ZONE,
       });
 
-      return (
-        eventsResponse.data.items?.flatMap((event) => {
-          if (!event.id || !event.start?.dateTime || !event.end?.dateTime) {
-            return [];
-          }
+      const events: calendar_v3.Schema$Event[] = eventsResponse.data.items ?? [];
 
-          const startHour = clampHour(getHourValue(event.start.dateTime));
-          const endHour = clampHour(getHourValue(event.end.dateTime));
+      return events.flatMap((event) => {
+        if (!event.id || !event.start?.dateTime || !event.end?.dateTime) {
+          return [];
+        }
 
-          if (endHour <= HOURS[0] || startHour >= HOURS[HOURS.length - 1] + 1) {
-            return [];
-          }
+        const startHour = clampHour(getHourValue(event.start.dateTime));
+        const endHour = clampHour(getHourValue(event.end.dateTime));
 
-          return [
-            {
-              date,
-              endHour,
-              id: event.id,
-              organizer:
-                event.organizer?.displayName ??
-                event.organizer?.email ??
-                event.creator?.displayName ??
-                event.creator?.email ??
-                "Google Calendar",
-              roomId: room.id,
-              startHour,
-              title: event.summary ?? "Reserved",
-            },
-          ];
-        }) ?? []
-      );
+        if (endHour <= HOURS[0] || startHour >= HOURS[HOURS.length - 1] + 1) {
+          return [];
+        }
+
+        return [
+          {
+            calendarId,
+            date,
+            endHour,
+            endLocal: formatDateTimeLocalInTimeZone(event.end.dateTime, GOOGLE_CALENDAR_TIME_ZONE),
+            id: event.id,
+            organizer:
+              event.organizer?.displayName ??
+              event.organizer?.email ??
+              event.creator?.displayName ??
+              event.creator?.email ??
+              "Google Calendar",
+            roomId: room.id,
+            startHour,
+            startLocal: formatDateTimeLocalInTimeZone(
+              event.start.dateTime,
+              GOOGLE_CALENDAR_TIME_ZONE,
+            ),
+            title: event.summary ?? "Reserved",
+          },
+        ] satisfies ScheduleBooking[];
+      });
     }),
   );
 
+  session.set("googleTokens", refreshedTokens);
+
+  const bookings: ScheduleBooking[] = bookingGroups
+    .flat()
+    .sort((left: ScheduleBooking, right: ScheduleBooking) => left.startHour - right.startHour);
+
   return {
-    bookings: bookingGroups.flat().sort((left, right) => left.startHour - right.startHour),
+    bookings,
+    headers: {
+      "Set-Cookie": await commitSession(session),
+    },
     isAuthenticated: true,
+    roomCalendarIds,
     roomCount: roomCalendars.length,
-  };
+  } satisfies LoaderData;
 }
 
-type ModalMode = { kind: "view"; booking: Booking } | null;
+function buildActionError(error: string, defaultValues: ModalValues) {
+  return {
+    defaultValues,
+    error,
+  } satisfies ActionData;
+}
+
+export async function action({ request }: Route.ActionArgs) {
+  const [{ commitSession, getSession, readGoogleSession }] = await Promise.all([
+    import("../lib/session.server"),
+  ]);
+  const session = await getSession(request);
+  const googleSession = readGoogleSession(session);
+
+  if (!googleSession) {
+    return redirect("/auth/google");
+  }
+
+  const formData = await request.formData();
+  const intentValue = formData.get("intent");
+  const titleValue = formData.get("title");
+  const roomIdValue = formData.get("roomId");
+  const bookingIdValue = formData.get("bookingId");
+  const originalRoomIdValue = formData.get("originalRoomId");
+  const startLocal = parseDateTimeLocal(formData.get("startLocal"));
+  const endLocal = parseDateTimeLocal(formData.get("endLocal"));
+  const intent = intentValue === "update" ? "update" : intentValue === "create" ? "create" : null;
+  const title = typeof titleValue === "string" ? titleValue.trim() : "";
+  const roomId =
+    typeof roomIdValue === "string" && ROOMS.some((room) => room.id === roomIdValue)
+      ? roomIdValue
+      : "";
+  const bookingId = typeof bookingIdValue === "string" ? bookingIdValue.trim() : "";
+  const originalRoomId =
+    typeof originalRoomIdValue === "string" && ROOMS.some((room) => room.id === originalRoomIdValue)
+      ? originalRoomIdValue
+      : roomId;
+  const defaultIntent: ModalValues["intent"] = intent === "update" ? "update" : "create";
+  const defaultValues: ModalValues = {
+    bookingId: bookingId || undefined,
+    endLocal: endLocal ?? "",
+    intent: defaultIntent,
+    originalRoomId: originalRoomId || undefined,
+    roomId,
+    startLocal: startLocal ?? "",
+    title,
+  };
+
+  if (!intent || !roomId || !startLocal || !endLocal || !title) {
+    return buildActionError("Provide a title, room, start time, and end time.", defaultValues);
+  }
+
+  const startDate = new Date(
+    convertDateTimeLocalToTimeZoneIso(startLocal, GOOGLE_CALENDAR_TIME_ZONE),
+  );
+  const endDate = new Date(convertDateTimeLocalToTimeZoneIso(endLocal, GOOGLE_CALENDAR_TIME_ZONE));
+
+  if (Number.isNaN(startDate.valueOf()) || Number.isNaN(endDate.valueOf())) {
+    return buildActionError("The provided start or end time could not be parsed.", defaultValues);
+  }
+
+  if (endDate <= startDate) {
+    return buildActionError("End time must be later than start time.", defaultValues);
+  }
+
+  const todayInAmsterdam = getAmsterdamDayBounds().date;
+  const startDateLabel = formatDateTimeLocalInTimeZone(
+    startDate.toISOString(),
+    GOOGLE_CALENDAR_TIME_ZONE,
+  ).slice(0, 10);
+  const endDateLabel = formatDateTimeLocalInTimeZone(
+    endDate.toISOString(),
+    GOOGLE_CALENDAR_TIME_ZONE,
+  ).slice(0, 10);
+
+  if (startDateLabel !== todayInAmsterdam || endDateLabel !== todayInAmsterdam) {
+    return buildActionError(
+      "This board only manages bookings for today in Amsterdam time.",
+      defaultValues,
+    );
+  }
+
+  try {
+    const { calendar, refreshedTokens, roomCalendars } = await loadRoomCalendars(
+      googleSession.googleTokens,
+    );
+    const roomCalendarIds = buildRoomCalendarIds(roomCalendars);
+    const targetCalendarId = roomCalendarIds[roomId];
+
+    if (!targetCalendarId) {
+      return buildActionError(
+        "The selected room calendar is not available for your Google account.",
+        defaultValues,
+      );
+    }
+
+    const requestBody = {
+      end: {
+        dateTime: endDate.toISOString(),
+        timeZone: GOOGLE_CALENDAR_TIME_ZONE,
+      },
+      start: {
+        dateTime: startDate.toISOString(),
+        timeZone: GOOGLE_CALENDAR_TIME_ZONE,
+      },
+      summary: title,
+    };
+
+    if (intent === "create") {
+      await calendar.events.insert({
+        calendarId: targetCalendarId,
+        requestBody,
+      });
+    } else {
+      const originalCalendarId = originalRoomId ? roomCalendarIds[originalRoomId] : undefined;
+
+      if (!bookingId || !originalCalendarId) {
+        return buildActionError(
+          "The existing booking could not be identified for editing.",
+          defaultValues,
+        );
+      }
+
+      if (originalCalendarId === targetCalendarId) {
+        await calendar.events.update({
+          calendarId: targetCalendarId,
+          eventId: bookingId,
+          requestBody,
+        });
+      } else {
+        await calendar.events.insert({
+          calendarId: targetCalendarId,
+          requestBody,
+        });
+        await calendar.events.delete({
+          calendarId: originalCalendarId,
+          eventId: bookingId,
+        });
+      }
+    }
+
+    session.set("googleTokens", refreshedTokens);
+
+    return redirect("/", {
+      headers: {
+        "Set-Cookie": await commitSession(session),
+      },
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Google Calendar rejected the booking change.";
+
+    return buildActionError(message, defaultValues);
+  }
+}
+
+export function headers({ loaderHeaders }: Route.HeadersArgs) {
+  return loaderHeaders;
+}
 
 export default function Design7() {
-  const { bookings, isAuthenticated, roomCount } = useLoaderData<typeof loader>();
-  const [modal, setModal] = useState<ModalMode>(null);
+  const { bookings, isAuthenticated, roomCalendarIds, roomCount } = useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
+  const navigation = useNavigation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [now, setNow] = useState(getCurrentTimeOffset);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -259,7 +609,79 @@ export default function Design7() {
     }
   }
 
+  function openCreateModal(nextRoomId?: string) {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("bookingId");
+    nextParams.set("modal", "create");
+
+    if (nextRoomId) {
+      nextParams.set("roomId", nextRoomId);
+    } else {
+      nextParams.delete("roomId");
+    }
+
+    setSearchParams(nextParams);
+  }
+
+  function openEditModal(nextBookingId: string) {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("roomId");
+    nextParams.set("bookingId", nextBookingId);
+    nextParams.set("modal", "edit");
+    setSearchParams(nextParams);
+  }
+
+  function closeModal() {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("bookingId");
+    nextParams.delete("modal");
+    nextParams.delete("roomId");
+    setSearchParams(nextParams);
+  }
+
   const totalWidth = HOURS.length * HOUR_WIDTH;
+  const modalKind = searchParams.get("modal");
+  const requestedRoomId = searchParams.get("roomId") ?? undefined;
+  const selectedBookingId = searchParams.get("bookingId");
+  const selectedBooking: ScheduleBooking | null =
+    modalKind === "edit" && selectedBookingId
+      ? (bookings.find((booking) => booking.id === selectedBookingId) ?? null)
+      : null;
+  const defaultActionValues = actionData?.defaultValues;
+  const modalState: ModalState =
+    modalKind === "create"
+      ? {
+          kind: "create",
+          values:
+            defaultActionValues?.intent === "create"
+              ? defaultActionValues
+              : createDefaultBookingValues(requestedRoomId),
+        }
+      : modalKind === "edit" && selectedBooking
+        ? {
+            booking: selectedBooking,
+            kind: "edit",
+            values:
+              defaultActionValues?.intent === "update"
+                ? defaultActionValues
+                : {
+                    bookingId: selectedBooking.id,
+                    endLocal: selectedBooking.endLocal,
+                    intent: "update",
+                    originalRoomId: selectedBooking.roomId,
+                    roomId: selectedBooking.roomId,
+                    startLocal: selectedBooking.startLocal,
+                    title: selectedBooking.title,
+                  },
+          }
+        : null;
+  const writableRooms = ROOMS.filter((room) => typeof roomCalendarIds[room.id] === "string");
+  const isSubmitting = navigation.state === "submitting";
+  const fallbackActiveRoomId = writableRooms[0]?.id || ROOMS[0]?.id || "";
+  const activeRoomId =
+    modalState && modalState.values.roomId.length > 0
+      ? modalState.values.roomId
+      : fallbackActiveRoomId;
 
   return (
     <div
@@ -270,13 +692,25 @@ export default function Design7() {
         <p className="text-sm font-medium text-gray-500">{formatDate()}</p>
         <h1 className="text-lg font-semibold tracking-tight text-gray-900">Room Schedule</h1>
         {isAuthenticated ? (
-          <button
-            onClick={scrollToNow}
-            className="cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium text-white transition-colors hover:opacity-90"
-            style={{ backgroundColor: ACCENT }}
-          >
-            Now
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                openCreateModal();
+              }}
+              className="cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium text-white transition-colors hover:opacity-90"
+              style={{ backgroundColor: ACCENT }}
+            >
+              New booking
+            </button>
+            <button
+              type="button"
+              onClick={scrollToNow}
+              className="cursor-pointer rounded-md border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            >
+              Now
+            </button>
+          </div>
         ) : (
           <Link
             className="rounded-md px-3 py-1.5 text-sm font-medium text-white transition-colors hover:opacity-90"
@@ -360,9 +794,9 @@ export default function Design7() {
                           left,
                           width,
                         }}
-                        aria-label={`View booking ${booking.title} in ${room.name}`}
+                        aria-label={`Edit booking ${booking.title} in ${room.name}`}
                         onClick={() => {
-                          setModal({ kind: "view", booking });
+                          openEditModal(booking.id);
                         }}
                       >
                         <div className="min-w-0">
@@ -382,6 +816,18 @@ export default function Design7() {
                       </button>
                     );
                   })}
+
+                  {isAuthenticated && typeof roomCalendarIds[room.id] === "string" ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        openCreateModal(room.id);
+                      }}
+                      className="absolute top-1/2 right-3 -translate-y-1/2 rounded-full border border-dashed border-gray-300 px-2 py-1 text-xs font-medium text-gray-500 transition hover:border-gray-400 hover:text-gray-700"
+                    >
+                      Add
+                    </button>
+                  ) : null}
                 </div>
               );
             })}
@@ -440,70 +886,161 @@ export default function Design7() {
         </div>
       </div>
 
-      {modal && (
+      {modalState ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <button
             type="button"
             className="absolute inset-0 bg-black/30 backdrop-blur-sm"
             aria-label="Close dialog"
-            onClick={() => {
-              setModal(null);
-            }}
+            onClick={closeModal}
           />
-          <div
+          <Form
+            method="post"
             role="dialog"
             aria-modal="true"
-            aria-labelledby="booking-view-title"
-            className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl"
-            style={{ fontFamily: "'Source Sans 3', sans-serif", zIndex: 1 }}
+            aria-labelledby="booking-form-title"
+            className="relative z-10 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl"
+            style={{ fontFamily: "'Source Sans 3', sans-serif" }}
           >
             <div className="mb-4 flex items-start justify-between">
               <div>
-                <h2 id="booking-view-title" className="text-lg font-semibold text-gray-900">
-                  {modal.booking.title}
+                <h2 id="booking-form-title" className="text-lg font-semibold text-gray-900">
+                  {modalState.kind === "create" ? "Create booking" : "Edit booking"}
                 </h2>
                 <p className="text-sm text-gray-400">
-                  {ROOMS.find((room) => room.id === modal.booking.roomId)?.name} &middot;{" "}
-                  {formatBookingWindow(modal.booking.startHour, modal.booking.endHour)}
+                  {modalState.kind === "create"
+                    ? "Write a new event directly to the selected room calendar."
+                    : "Update the existing Google Calendar event for this booking."}
                 </p>
               </div>
               <div
                 className="h-4 w-4 rounded-full"
-                style={{ backgroundColor: getColor(modal.booking.roomId).border }}
+                style={{ backgroundColor: getColor(activeRoomId).border }}
               />
             </div>
 
             <div
               className="mb-5 rounded-lg p-3"
-              style={{ backgroundColor: getColor(modal.booking.roomId).bg }}
+              style={{ backgroundColor: getColor(activeRoomId).bg }}
             >
-              <p className="text-sm text-gray-600">
-                <span className="font-medium">Organizer:</span> {modal.booking.organizer}
-              </p>
-              <p className="text-sm text-gray-600">
-                <span className="font-medium">Duration:</span>{" "}
-                {formatBookingWindow(modal.booking.startHour, modal.booking.endHour)}
-              </p>
-              <p className="text-sm text-gray-600">
-                <span className="font-medium">Room:</span>{" "}
-                {ROOMS.find((room) => room.id === modal.booking.roomId)?.calendarSummary}
-              </p>
+              {modalState.kind === "edit" ? (
+                <>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-medium">Organizer:</span> {modalState.booking.organizer}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-medium">Current slot:</span>{" "}
+                    {formatBookingWindow(modalState.booking.startHour, modalState.booking.endHour)}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-medium">Current room:</span>{" "}
+                    {ROOMS.find((room) => room.id === modalState.booking.roomId)?.name}
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-gray-600">
+                  This board writes straight to Google Calendar rather than a local booking store.
+                </p>
+              )}
             </div>
+
+            <input name="intent" type="hidden" value={modalState.values.intent} />
+            {modalState.values.bookingId ? (
+              <input name="bookingId" type="hidden" value={modalState.values.bookingId} />
+            ) : null}
+            {modalState.values.originalRoomId ? (
+              <input name="originalRoomId" type="hidden" value={modalState.values.originalRoomId} />
+            ) : null}
+
+            <label className="mb-3 block">
+              <span className="mb-1 block text-sm font-medium text-gray-700">Title</span>
+              <input
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-gray-400"
+                defaultValue={modalState.values.title}
+                name="title"
+                placeholder="Weekly founder sync"
+                required
+                type="text"
+              />
+            </label>
+
+            <label className="mb-3 block">
+              <span className="mb-1 block text-sm font-medium text-gray-700">Room</span>
+              <select
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-gray-400"
+                defaultValue={modalState.values.roomId}
+                name="roomId"
+                required
+              >
+                {writableRooms.map((room) => (
+                  <option key={room.id} value={room.id}>
+                    {room.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="mb-3 block">
+              <span className="mb-1 block text-sm font-medium text-gray-700">Start</span>
+              <input
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-gray-400"
+                defaultValue={modalState.values.startLocal}
+                name="startLocal"
+                required
+                type="datetime-local"
+              />
+            </label>
+
+            <label className="mb-4 block">
+              <span className="mb-1 block text-sm font-medium text-gray-700">End</span>
+              <input
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-gray-400"
+                defaultValue={modalState.values.endLocal}
+                name="endLocal"
+                required
+                type="datetime-local"
+              />
+            </label>
+
+            {actionData?.error ? (
+              <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+                {actionData.error}
+              </p>
+            ) : null}
+
+            {modalState.kind === "edit" ? (
+              <p className="mb-4 text-sm text-gray-500">
+                Changing the room recreates the event in the target room calendar and removes the
+                old one.
+              </p>
+            ) : null}
 
             <div className="flex justify-end gap-3">
               <button
                 type="button"
-                onClick={() => {
-                  setModal(null);
-                }}
+                onClick={closeModal}
                 className="cursor-pointer rounded-lg px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-100"
               >
-                Close
+                Cancel
+              </button>
+              <button
+                className="cursor-pointer rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isSubmitting}
+                style={{ backgroundColor: ACCENT }}
+                type="submit"
+              >
+                {isSubmitting
+                  ? modalState.kind === "create"
+                    ? "Creating..."
+                    : "Saving..."
+                  : modalState.kind === "create"
+                    ? "Create booking"
+                    : "Save changes"}
               </button>
             </div>
-          </div>
+          </Form>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
