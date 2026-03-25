@@ -9,14 +9,7 @@ import {
 } from "react-router";
 
 import { HOURS, ROOMS, formatHour } from "../../data/rooms";
-import {
-  ACCENT,
-  HEADER_HEIGHT,
-  HOUR_WIDTH,
-  ROW_HEIGHT,
-  SIDEBAR_WIDTH,
-  getRoomColor,
-} from "./schedule-styles";
+import { ACCENT, HEADER_HEIGHT, HOUR_WIDTH, ROW_HEIGHT, getRoomColor } from "./schedule-styles";
 import {
   createDefaultBookingValues,
   formatBookingWindow,
@@ -155,17 +148,21 @@ export function SchedulePage() {
       style={{ fontFamily: "'Source Sans 3', sans-serif" }}
       className="min-h-screen bg-white text-gray-900"
     >
-      <header className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-        <p className="text-sm font-medium text-gray-500">{formatScheduleDate()}</p>
-        <h1 className="text-lg font-semibold tracking-tight text-gray-900">Room Schedule</h1>
+      <header className="flex items-center justify-between gap-2 border-b border-gray-200 px-3 py-2 md:px-6 md:py-4">
+        <div className="min-w-0">
+          <h1 className="text-sm font-semibold tracking-tight text-gray-900 md:text-lg">
+            Room Schedule
+          </h1>
+          <p className="text-xs font-medium text-gray-500 md:text-sm">{formatScheduleDate()}</p>
+        </div>
         {isAuthenticated ? (
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 md:gap-2">
             <button
               type="button"
               onClick={() => {
                 openCreateModal();
               }}
-              className="cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium text-white transition-colors hover:opacity-90"
+              className="cursor-pointer rounded-md px-2 py-1 text-xs font-medium text-white transition-colors hover:opacity-90 md:px-3 md:py-1.5 md:text-sm"
               style={{ backgroundColor: ACCENT }}
             >
               New booking
@@ -173,14 +170,14 @@ export function SchedulePage() {
             <button
               type="button"
               onClick={scrollToNow}
-              className="cursor-pointer rounded-md border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+              className="cursor-pointer rounded-md border border-gray-200 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 md:px-3 md:py-1.5 md:text-sm"
             >
               Now
             </button>
           </div>
         ) : (
           <Link
-            className="rounded-md px-3 py-1.5 text-sm font-medium text-white transition-colors hover:opacity-90"
+            className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-white transition-colors hover:opacity-90 md:px-3 md:py-1.5 md:text-sm"
             style={{ backgroundColor: ACCENT }}
             to="/auth/google"
           >
@@ -189,8 +186,8 @@ export function SchedulePage() {
         )}
       </header>
 
-      <div className="flex" style={{ height: "calc(100vh - 65px)" }}>
-        <div className="shrink-0 border-r border-gray-200" style={{ width: SIDEBAR_WIDTH }}>
+      <div className="flex" style={{ height: "calc(100vh - 53px)" }}>
+        <div className="w-11 shrink-0 border-r border-gray-200 md:w-[200px]">
           <div className="border-b border-gray-200" style={{ height: HEADER_HEIGHT }} />
           {ROOMS.map((room) => {
             const color = getRoomColor(room.id);
@@ -198,14 +195,14 @@ export function SchedulePage() {
             return (
               <div
                 key={room.id}
-                className="flex items-center gap-3 border-b border-gray-100 px-4"
+                className="flex items-center justify-center gap-3 border-b border-gray-100 px-1 md:justify-start md:px-4"
                 style={{ height: ROW_HEIGHT }}
               >
                 <div
                   className="h-3 w-3 shrink-0 rounded-full"
                   style={{ backgroundColor: color.border }}
                 />
-                <div className="min-w-0">
+                <div className="hidden min-w-0 md:block">
                   <p className="truncate text-sm font-semibold leading-tight">{room.name}</p>
                   <p className="text-xs text-gray-400">{room.capacityLabel}</p>
                 </div>
