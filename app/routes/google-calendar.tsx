@@ -1,5 +1,6 @@
 import { Form, Link, useLoaderData } from "react-router";
 
+import { Button } from "~/components/ui/button";
 import type { Route } from "./+types/google-calendar";
 
 export function meta(_args: Route.MetaArgs) {
@@ -136,12 +137,13 @@ export default function GoogleCalendarRoute() {
                 events from a room calendar without introducing a second booking system.
               </p>
             </div>
-            <Link
-              className="rounded-full border border-white/15 px-5 py-2 text-sm font-medium text-white transition hover:border-white/30 hover:bg-white/10"
-              to="/"
+            <Button
+              variant="outline"
+              asChild
+              className="rounded-full border-white/15 bg-transparent text-white hover:border-white/30 hover:bg-white/10"
             >
-              Back to homepage
-            </Link>
+              <Link to="/">Back to homepage</Link>
+            </Button>
           </div>
           {data.user ? (
             <div className="mt-6 flex flex-wrap items-center gap-4">
@@ -152,22 +154,23 @@ export default function GoogleCalendarRoute() {
                 </p>
               </div>
               <Form method="post" action="/auth/logout">
-                <button
-                  className="rounded-full border border-white/15 px-5 py-2 text-sm font-medium text-white transition hover:border-white/30 hover:bg-white/10"
+                <Button
+                  variant="outline"
                   type="submit"
+                  className="rounded-full border-white/15 bg-transparent text-white hover:border-white/30 hover:bg-white/10"
                 >
                   Sign out
-                </button>
+                </Button>
               </Form>
             </div>
           ) : (
             <div className="mt-6">
-              <Link
-                className="inline-flex rounded-full bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200"
-                to="/auth/google"
+              <Button
+                asChild
+                className="rounded-full bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 hover:bg-cyan-200"
               >
-                Connect Google
-              </Link>
+                <Link to="/auth/google">Connect Google</Link>
+              </Button>
             </div>
           )}
         </section>

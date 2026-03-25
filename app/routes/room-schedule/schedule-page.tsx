@@ -8,6 +8,10 @@ import {
   useSearchParams,
 } from "react-router";
 
+import { Button } from "~/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "~/components/ui/dialog";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 import { HOURS, ROOMS, formatHour } from "../../data/rooms";
 import { ACCENT, HEADER_HEIGHT, HOUR_WIDTH, ROW_HEIGHT, getRoomColor } from "./schedule-styles";
 import {
@@ -157,32 +161,34 @@ export function SchedulePage() {
         </div>
         {isAuthenticated ? (
           <div className="flex shrink-0 items-center gap-1.5 md:gap-2">
-            <button
-              type="button"
+            <Button
+              size="sm"
               onClick={() => {
                 openCreateModal();
               }}
-              className="cursor-pointer rounded-md px-2 py-1 text-xs font-medium text-white transition-colors hover:opacity-90 md:px-3 md:py-1.5 md:text-sm"
+              className="md:px-3 md:py-1.5 md:text-sm"
               style={{ backgroundColor: ACCENT }}
             >
               New booking
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={scrollToNow}
-              className="cursor-pointer rounded-md border border-gray-200 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 md:px-3 md:py-1.5 md:text-sm"
+              className="md:px-3 md:py-1.5 md:text-sm"
             >
               Now
-            </button>
+            </Button>
           </div>
         ) : (
-          <Link
-            className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-white transition-colors hover:opacity-90 md:px-3 md:py-1.5 md:text-sm"
+          <Button
+            size="sm"
+            asChild
+            className="shrink-0 md:px-3 md:py-1.5 md:text-sm"
             style={{ backgroundColor: ACCENT }}
-            to="/auth/google"
           >
-            Connect Google
-          </Link>
+            <Link to="/auth/google">Connect Google</Link>
+          </Button>
         )}
       </header>
 
@@ -282,15 +288,16 @@ export function SchedulePage() {
                   })}
 
                   {isAuthenticated && typeof roomCalendarIds[room.id] === "string" ? (
-                    <button
-                      type="button"
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => {
                         openCreateModal(room.id);
                       }}
-                      className="absolute top-1/2 right-3 -translate-y-1/2 rounded-full border border-dashed border-gray-300 px-2 py-1 text-xs font-medium text-gray-500 transition hover:border-gray-400 hover:text-gray-700"
+                      className="absolute top-1/2 right-3 -translate-y-1/2 rounded-full border border-dashed border-gray-300 text-xs text-gray-500 hover:border-gray-400 hover:text-gray-700"
                     >
                       Add
-                    </button>
+                    </Button>
                   ) : null}
                 </div>
               );
@@ -325,13 +332,9 @@ export function SchedulePage() {
                   <p className="mt-2 text-sm text-gray-500">
                     The schedule design stays the same. Only the data source changes.
                   </p>
-                  <Link
-                    className="mt-4 inline-flex rounded-md px-4 py-2 text-sm font-medium text-white"
-                    style={{ backgroundColor: ACCENT }}
-                    to="/auth/google"
-                  >
-                    Connect Google
-                  </Link>
+                  <Button asChild className="mt-4" style={{ backgroundColor: ACCENT }}>
+                    <Link to="/auth/google">Connect Google</Link>
+                  </Button>
                 </div>
               </div>
             ) : null}
@@ -350,32 +353,29 @@ export function SchedulePage() {
         </div>
       </div>
 
-      {modalState ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
-            aria-label="Close dialog"
-            onClick={closeModal}
-          />
-          <Form
-            method="post"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="booking-form-title"
-            className="relative z-10 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl"
+      <Dialog
+        open={modalState !== null}
+        onOpenChange={(open) => {
+          if (!open) closeModal();
+        }}
+      >
+        {modalState ? (
+          <DialogContent
             style={{ fontFamily: "'Source Sans 3', sans-serif" }}
+            onOpenAutoFocus={(e) => {
+              e.preventDefault();
+            }}
           >
             <div className="mb-4 flex items-start justify-between">
               <div>
-                <h2 id="booking-form-title" className="text-lg font-semibold text-gray-900">
+                <DialogTitle>
                   {modalState.kind === "create" ? "Create booking" : "Edit booking"}
-                </h2>
-                <p className="text-sm text-gray-400">
+                </DialogTitle>
+                <DialogDescription>
                   {modalState.kind === "create"
                     ? "Write a new event directly to the selected room calendar."
                     : "Update the existing Google Calendar event for this booking."}
-                </p>
+                </DialogDescription>
               </div>
               <div
                 className="h-4 w-4 rounded-full"
@@ -408,123 +408,132 @@ export function SchedulePage() {
               )}
             </div>
 
-            {modalState.values.bookingId ? (
-              <input name="bookingId" type="hidden" value={modalState.values.bookingId} />
-            ) : null}
-            {modalState.values.originalRoomId ? (
-              <input name="originalRoomId" type="hidden" value={modalState.values.originalRoomId} />
-            ) : null}
+            <Form method="post">
+              {modalState.values.bookingId ? (
+                <input name="bookingId" type="hidden" value={modalState.values.bookingId} />
+              ) : null}
+              {modalState.values.originalRoomId ? (
+                <input
+                  name="originalRoomId"
+                  type="hidden"
+                  value={modalState.values.originalRoomId}
+                />
+              ) : null}
 
-            <label className="mb-3 block">
-              <span className="mb-1 block text-sm font-medium text-gray-700">Title</span>
-              <input
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-gray-400"
-                defaultValue={modalState.values.title}
-                name="title"
-                placeholder="Weekly founder sync"
-                required
-                type="text"
-              />
-            </label>
+              <div className="mb-3">
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  defaultValue={modalState.values.title}
+                  name="title"
+                  placeholder="Weekly founder sync"
+                  required
+                  type="text"
+                />
+              </div>
 
-            <label className="mb-3 block">
-              <span className="mb-1 block text-sm font-medium text-gray-700">Room</span>
-              <select
-                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-gray-400"
-                defaultValue={modalState.values.roomId}
-                name="roomId"
-                required
-              >
-                {writableRooms.map((room) => (
-                  <option key={room.id} value={room.id}>
-                    {room.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+              <div className="mb-3">
+                <Label htmlFor="roomId">Room</Label>
+                <select
+                  id="roomId"
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-gray-400"
+                  defaultValue={modalState.values.roomId}
+                  name="roomId"
+                  required
+                >
+                  {writableRooms.map((room) => (
+                    <option key={room.id} value={room.id}>
+                      {room.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <label className="mb-3 block">
-              <span className="mb-1 block text-sm font-medium text-gray-700">Start</span>
-              <input
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-gray-400"
-                defaultValue={modalState.values.startLocal}
-                name="startLocal"
-                required
-                type="datetime-local"
-              />
-            </label>
+              <div className="mb-3">
+                <Label htmlFor="startLocal">Start</Label>
+                <Input
+                  id="startLocal"
+                  defaultValue={modalState.values.startLocal}
+                  name="startLocal"
+                  required
+                  type="datetime-local"
+                />
+              </div>
 
-            <label className="mb-4 block">
-              <span className="mb-1 block text-sm font-medium text-gray-700">End</span>
-              <input
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-gray-400"
-                defaultValue={modalState.values.endLocal}
-                name="endLocal"
-                required
-                type="datetime-local"
-              />
-            </label>
+              <div className="mb-4">
+                <Label htmlFor="endLocal">End</Label>
+                <Input
+                  id="endLocal"
+                  defaultValue={modalState.values.endLocal}
+                  name="endLocal"
+                  required
+                  type="datetime-local"
+                />
+              </div>
 
-            {actionData?.error ? (
-              <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-                {actionData.error}
-              </p>
-            ) : null}
+              {actionData?.error ? (
+                <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {actionData.error}
+                </p>
+              ) : null}
 
-            {modalState.kind === "edit" ? (
-              <p className="mb-4 text-sm text-gray-500">
-                Changing the room recreates the event in the target room calendar and removes the
-                old one.
-              </p>
-            ) : null}
-
-            <div className="flex justify-between gap-3">
               {modalState.kind === "edit" ? (
-                <button
-                  className="cursor-pointer rounded-lg px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                <p className="mb-4 text-sm text-gray-500">
+                  Changing the room recreates the event in the target room calendar and removes the
+                  old one.
+                </p>
+              ) : null}
+
+              <div className="flex justify-between gap-3">
+                {modalState.kind === "edit" ? (
+                  <Button
+                    variant="destructive"
+                    size="lg"
+                    disabled={isSubmitting}
+                    name="intent"
+                    type="submit"
+                    value="delete"
+                  >
+                    {isDeleting ? "Deleting..." : "Delete"}
+                  </Button>
+                ) : (
+                  <span />
+                )}
+
+                <Button
+                  variant="ghost"
+                  size="lg"
+                  type="button"
+                  onClick={closeModal}
                   disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="lg"
+                  disabled={isSubmitting}
+                  style={{ backgroundColor: ACCENT }}
                   name="intent"
                   type="submit"
-                  value="delete"
+                  value={modalState.values.intent}
                 >
-                  {isDeleting ? "Deleting..." : "Delete"}
-                </button>
-              ) : (
-                <span />
-              )}
-
-              <button
-                type="button"
-                onClick={closeModal}
-                className="cursor-pointer rounded-lg px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-100"
-                disabled={isSubmitting}
-              >
-                Cancel
-              </button>
-              <button
-                className="cursor-pointer rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={isSubmitting}
-                style={{ backgroundColor: ACCENT }}
-                name="intent"
-                type="submit"
-                value={modalState.values.intent}
-              >
-                {isSubmitting
-                  ? submittedIntent === "create"
-                    ? "Creating..."
-                    : submittedIntent === "update"
-                      ? "Saving..."
-                      : modalState.kind === "create"
-                        ? "Creating..."
-                        : "Saving..."
-                  : modalState.kind === "create"
-                    ? "Create booking"
-                    : "Save changes"}
-              </button>
-            </div>
-          </Form>
-        </div>
-      ) : null}
+                  {isSubmitting
+                    ? submittedIntent === "create"
+                      ? "Creating..."
+                      : submittedIntent === "update"
+                        ? "Saving..."
+                        : modalState.kind === "create"
+                          ? "Creating..."
+                          : "Saving..."
+                    : modalState.kind === "create"
+                      ? "Create booking"
+                      : "Save changes"}
+                </Button>
+              </div>
+            </Form>
+          </DialogContent>
+        ) : null}
+      </Dialog>
     </div>
   );
 }
