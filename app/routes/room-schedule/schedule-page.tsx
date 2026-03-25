@@ -88,10 +88,23 @@ export function SchedulePage() {
   const modalKind = searchParams.get("modal");
   const requestedRoomId = searchParams.get("roomId") ?? undefined;
   const selectedBookingId = searchParams.get("bookingId");
-  const selectedBooking: ScheduleBooking | null =
-    modalKind === "edit" && selectedBookingId
-      ? (bookings.find((booking) => booking.id === selectedBookingId) ?? null)
-      : null;
+  const bookingsByRoom = new Map<string, ScheduleBooking[]>();
+  let selectedBooking: ScheduleBooking | null = null;
+
+  for (const booking of bookings) {
+    const roomBookings = bookingsByRoom.get(booking.roomId);
+
+    if (roomBookings) {
+      roomBookings.push(booking);
+    } else {
+      bookingsByRoom.set(booking.roomId, [booking]);
+    }
+
+    if (modalKind === "edit" && selectedBookingId && booking.id === selectedBookingId) {
+      selectedBooking = booking;
+    }
+  }
+
   const defaultActionValues = actionData?.defaultValues;
   const modalState: ModalState =
     modalKind === "create"
@@ -207,7 +220,7 @@ export function SchedulePage() {
             </div>
 
             {ROOMS.map((room) => {
-              const roomBookings = bookings.filter((booking) => booking.roomId === room.id);
+              const roomBookings = bookingsByRoom.get(room.id) ?? [];
               const color = getRoomColor(room.id);
 
               return (
