@@ -183,7 +183,14 @@ export async function mutateScheduleBooking(request: Request) {
   const originalRoomIdValue = formData.get("originalRoomId");
   const startLocal = parseDateTimeLocal(formData.get("startLocal"));
   const endLocal = parseDateTimeLocal(formData.get("endLocal"));
-  const intent = intentValue === "update" ? "update" : intentValue === "create" ? "create" : null;
+  const intent =
+    intentValue === "update"
+      ? "update"
+      : intentValue === "create"
+        ? "create"
+        : intentValue === "delete"
+          ? "delete"
+          : null;
   const title = typeof titleValue === "string" ? titleValue.trim() : "";
   const roomId =
     typeof roomIdValue === "string" && ROOMS.some((room) => room.id === roomIdValue)
@@ -205,7 +212,53 @@ export async function mutateScheduleBooking(request: Request) {
     title,
   };
 
-  if (!intent || !roomId || !startLocal || !endLocal || !title) {
+  if (!intent) {
+    return buildActionError("Unknown booking action.", defaultValues);
+  }
+
+  if (intent === "delete") {
+    if (!bookingId || !originalRoomId) {
+      return buildActionError(
+        "The existing booking could not be identified for deletion.",
+        defaultValues,
+      );
+    }
+
+    try {
+      const { calendar, refreshedTokens, roomCalendars } = await loadRoomCalendars(
+        googleSession.googleTokens,
+      );
+      const roomCalendarIds = buildRoomCalendarIds(roomCalendars);
+      const originalCalendarId = roomCalendarIds[originalRoomId];
+
+      if (!originalCalendarId) {
+        return buildActionError(
+          "The selected room calendar is not available for your Google account.",
+          defaultValues,
+        );
+      }
+
+      await calendar.events.delete({
+        calendarId: originalCalendarId,
+        eventId: bookingId,
+      });
+
+      session.set("googleTokens", refreshedTokens);
+
+      return redirect("/", {
+        headers: {
+          "Set-Cookie": await commitSession(session),
+        },
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Google Calendar rejected the booking change.";
+
+      return buildActionError(message, defaultValues);
+    }
+  }
+
+  if (!roomId || !startLocal || !endLocal || !title) {
     return buildActionError("Provide a title, room, start time, and end time.", defaultValues);
   }
 

@@ -134,7 +134,16 @@ export function SchedulePage() {
           }
         : null;
   const writableRooms = ROOMS.filter((room) => typeof roomCalendarIds[room.id] === "string");
+  const submittedIntent =
+    navigation.formData?.get("intent") === "delete"
+      ? "delete"
+      : navigation.formData?.get("intent") === "create"
+        ? "create"
+        : navigation.formData?.get("intent") === "update"
+          ? "update"
+          : null;
   const isSubmitting = navigation.state === "submitting";
+  const isDeleting = isSubmitting && submittedIntent === "delete";
   const fallbackActiveRoomId = writableRooms[0]?.id || ROOMS[0]?.id || "";
   const activeRoomId =
     modalState && modalState.values.roomId.length > 0
@@ -402,7 +411,6 @@ export function SchedulePage() {
               )}
             </div>
 
-            <input name="intent" type="hidden" value={modalState.values.intent} />
             {modalState.values.bookingId ? (
               <input name="bookingId" type="hidden" value={modalState.values.bookingId} />
             ) : null}
@@ -473,11 +481,26 @@ export function SchedulePage() {
               </p>
             ) : null}
 
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-between gap-3">
+              {modalState.kind === "edit" ? (
+                <button
+                  className="cursor-pointer rounded-lg px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isSubmitting}
+                  name="intent"
+                  type="submit"
+                  value="delete"
+                >
+                  {isDeleting ? "Deleting..." : "Delete"}
+                </button>
+              ) : (
+                <span />
+              )}
+
               <button
                 type="button"
                 onClick={closeModal}
                 className="cursor-pointer rounded-lg px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-100"
+                disabled={isSubmitting}
               >
                 Cancel
               </button>
@@ -485,12 +508,18 @@ export function SchedulePage() {
                 className="cursor-pointer rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={isSubmitting}
                 style={{ backgroundColor: ACCENT }}
+                name="intent"
                 type="submit"
+                value={modalState.values.intent}
               >
                 {isSubmitting
-                  ? modalState.kind === "create"
+                  ? submittedIntent === "create"
                     ? "Creating..."
-                    : "Saving..."
+                    : submittedIntent === "update"
+                      ? "Saving..."
+                      : modalState.kind === "create"
+                        ? "Creating..."
+                        : "Saving..."
                   : modalState.kind === "create"
                     ? "Create booking"
                     : "Save changes"}
