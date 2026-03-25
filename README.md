@@ -85,3 +85,17 @@ This template comes with [Tailwind CSS](https://tailwindcss.com/) already config
 ---
 
 Built with ❤️ using React Router.
+
+## Google Calendar OAuth
+
+Create a local `.env` file with:
+
+```bash
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_REDIRECT_URI=http://localhost:5173/auth/google/callback
+SESSION_SECRET=replace-with-a-long-random-string
+GOOGLE_ROOM_CALENDAR_ID=room-calendar@example.com
+```
+
+Then run `pnpm dev` and open `/google-calendar`.
