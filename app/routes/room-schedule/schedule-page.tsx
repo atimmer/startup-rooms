@@ -29,6 +29,7 @@ export function SchedulePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [now, setNow] = useState(getCurrentTimeOffset);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const hasAutoScrolledRef = useRef(false);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -40,13 +41,43 @@ export function SchedulePage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (hasAutoScrolledRef.current || typeof window === "undefined") {
+      return;
+    }
+
+    const scrollContainer = scrollRef.current;
+
+    if (!scrollContainer || !window.matchMedia("(max-width: 767px)").matches) {
+      return;
+    }
+
+    const offset = getCurrentTimeOffset();
+
+    if (offset === null) {
+      return;
+    }
+
+    hasAutoScrolledRef.current = true;
+
+    const frameId = window.requestAnimationFrame(() => {
+      scrollContainer.scrollTo({
+        left: Math.max(offset - scrollContainer.clientWidth / 2, 0),
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, []);
+
   function scrollToNow() {
     const offset = getCurrentTimeOffset();
 
     if (offset !== null && scrollRef.current) {
       scrollRef.current.scrollTo({
         behavior: "smooth",
-        left: offset - scrollRef.current.clientWidth / 2,
+        left: Math.max(offset - scrollRef.current.clientWidth / 2, 0),
       });
     }
   }
