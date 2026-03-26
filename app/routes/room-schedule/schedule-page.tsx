@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import type { ComponentProps } from "react";
 import {
   Form,
@@ -6,6 +6,7 @@ import {
   useActionData,
   useLoaderData,
   useNavigation,
+  useRevalidator,
   useSearchParams,
 } from "react-router";
 
@@ -23,18 +24,44 @@ import {
 import type { ActionData, LoaderData, ModalState, ScheduleBooking } from "./schedule-types";
 
 type FormSubmitEvent = Parameters<NonNullable<ComponentProps<typeof Form>["onSubmit"]>>[0];
+const FOCUS_REFRESH_COOLDOWN_MS = 60_000;
 
 export function SchedulePage() {
   const { bookings, currentUserEmail, isAuthenticated, roomCalendarIds, roomCount } =
     useLoaderData<LoaderData>();
   const actionData = useActionData<ActionData>();
   const navigation = useNavigation();
+  const revalidator = useRevalidator();
   const [searchParams, setSearchParams] = useSearchParams();
   const [now, setNow] = useState(getCurrentTimeOffset);
   const [pendingIntent, setPendingIntent] = useState<"create" | "delete" | "update" | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasAutoScrolledRef = useRef(false);
+  const lastFocusRefreshAtRef = useRef(0);
   const [tooltipRoomId, setTooltipRoomId] = useState<string | null>(null);
+
+  const refreshScheduleIfStale = useEffectEvent(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    if (typeof document === "undefined" || document.visibilityState !== "visible") {
+      return;
+    }
+
+    if (revalidator.state !== "idle") {
+      return;
+    }
+
+    const nowValue = Date.now();
+
+    if (nowValue - lastFocusRefreshAtRef.current < FOCUS_REFRESH_COOLDOWN_MS) {
+      return;
+    }
+
+    lastFocusRefreshAtRef.current = nowValue;
+    void revalidator.revalidate();
+  });
 
   useEffect(() => {
     if (!tooltipRoomId) return;
@@ -57,6 +84,34 @@ export function SchedulePage() {
 
     return () => {
       clearInterval(id);
+    };
+  }, []);
+
+  useEffect(() => {
+    function handleVisibilityChange() {
+      refreshScheduleIfStale();
+    }
+
+    function handleWindowFocus() {
+      refreshScheduleIfStale();
+    }
+
+    function handlePageShow(event: PageTransitionEvent) {
+      if (!event.persisted) {
+        return;
+      }
+
+      refreshScheduleIfStale();
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleWindowFocus);
+    window.addEventListener("pageshow", handlePageShow);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleWindowFocus);
+      window.removeEventListener("pageshow", handlePageShow);
     };
   }, []);
 
@@ -309,9 +364,7 @@ export function SchedulePage() {
                   />
                 </button>
                 {isTooltipOpen && (
-                  <div
-                    className="absolute left-10 z-30 whitespace-nowrap rounded-lg border border-gray-200 bg-white px-3 py-1.5 shadow-lg md:hidden"
-                  >
+                  <div className="absolute left-10 z-30 whitespace-nowrap rounded-lg border border-gray-200 bg-white px-3 py-1.5 shadow-lg md:hidden">
                     <p className="text-sm font-semibold leading-tight">{room.name}</p>
                     <p className="text-xs text-gray-400">{room.capacityLabel}</p>
                   </div>
