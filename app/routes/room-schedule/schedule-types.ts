@@ -1,5 +1,7 @@
 import type { Booking, ROOMS } from "../../data/rooms";
 
+export type ScheduleDay = "today" | "tomorrow";
+
 export interface GoogleSessionTokens {
   accessToken?: string;
   expiryDate?: number;
@@ -32,6 +34,7 @@ export interface LoaderData {
   isAuthenticated: boolean;
   roomCalendarIds: Record<string, string>;
   roomCount: number;
+  scheduleDay: ScheduleDay;
 }
 
 export interface ModalValues {

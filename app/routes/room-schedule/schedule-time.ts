@@ -1,18 +1,61 @@
 import { HOURS, ROOMS, formatHour } from "../../data/rooms";
-import type { ModalValues } from "./schedule-types";
+import { HOUR_WIDTH } from "./schedule-styles";
+import type { ModalValues, ScheduleDay } from "./schedule-types";
 
 export const GOOGLE_CALENDAR_TIME_ZONE = "Europe/Amsterdam";
-export const SCHEDULE_DAY_LABEL = "tomorrow";
+export const DEFAULT_SCHEDULE_DAY = "tomorrow";
 
 const SCHEDULE_DAY_OFFSET = 1;
 const ONE_DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
 
-function getScheduleDayReferenceDate() {
-  return new Date(Date.now() + SCHEDULE_DAY_OFFSET * ONE_DAY_IN_MILLISECONDS);
+function getAmsterdamHourParts(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    hour12: false,
+    minute: "2-digit",
+    timeZone: GOOGLE_CALENDAR_TIME_ZONE,
+  }).formatToParts(date);
+  const hourValue = parts.find((part) => part.type === "hour")?.value;
+  const minuteValue = parts.find((part) => part.type === "minute")?.value;
+
+  if (!hourValue || !minuteValue) {
+    throw new Error("Unable to determine the Amsterdam time.");
+  }
+
+  return {
+    hour: Number(hourValue),
+    minute: Number(minuteValue),
+  };
 }
 
-export function formatScheduleDate() {
-  return getScheduleDayReferenceDate().toLocaleDateString("en-US", {
+function getScheduleDayReferenceDate(day: ScheduleDay) {
+  const offset = day === "tomorrow" ? SCHEDULE_DAY_OFFSET : 0;
+
+  return new Date(Date.now() + offset * ONE_DAY_IN_MILLISECONDS);
+}
+
+export function parseScheduleDay(value: string | null): ScheduleDay {
+  return value === "today" ? "today" : DEFAULT_SCHEDULE_DAY;
+}
+
+export function formatScheduleDayLabel(day: ScheduleDay) {
+  return day;
+}
+
+export function getCurrentTimeOffset(): number | null {
+  const { hour, minute } = getAmsterdamHourParts(new Date());
+  const startHour = HOURS[0];
+  const endHour = HOURS[HOURS.length - 1] + 1;
+
+  if (hour < startHour || hour >= endHour) {
+    return null;
+  }
+
+  return (hour - startHour + minute / 60) * HOUR_WIDTH;
+}
+
+export function formatScheduleDate(day: ScheduleDay) {
+  return getScheduleDayReferenceDate(day).toLocaleDateString("en-US", {
     timeZone: GOOGLE_CALENDAR_TIME_ZONE,
     weekday: "long",
     month: "long",
@@ -43,8 +86,8 @@ export function getTimeZoneOffsetLabel(date: Date) {
   return getOffsetLabelForTimeZone(GOOGLE_CALENDAR_TIME_ZONE, date);
 }
 
-export function getAmsterdamScheduleDayBounds() {
-  const referenceDate = getScheduleDayReferenceDate();
+export function getAmsterdamScheduleDayBounds(scheduleDay: ScheduleDay) {
+  const referenceDate = getScheduleDayReferenceDate(scheduleDay);
   const parts = new Intl.DateTimeFormat("en-CA", {
     day: "2-digit",
     month: "2-digit",
@@ -53,16 +96,16 @@ export function getAmsterdamScheduleDayBounds() {
   }).formatToParts(referenceDate);
   const year = parts.find((part) => part.type === "year")?.value;
   const month = parts.find((part) => part.type === "month")?.value;
-  const day = parts.find((part) => part.type === "day")?.value;
+  const dayValue = parts.find((part) => part.type === "day")?.value;
 
-  if (!year || !month || !day) {
+  if (!year || !month || !dayValue) {
     throw new Error("Unable to determine the schedule date in Amsterdam.");
   }
 
   return {
-    date: `${year}-${month}-${day}`,
-    timeMax: `${year}-${month}-${day}T23:59:59${getTimeZoneOffsetLabel(referenceDate)}`,
-    timeMin: `${year}-${month}-${day}T00:00:00${getTimeZoneOffsetLabel(referenceDate)}`,
+    date: `${year}-${month}-${dayValue}`,
+    timeMax: `${year}-${month}-${dayValue}T23:59:59${getTimeZoneOffsetLabel(referenceDate)}`,
+    timeMin: `${year}-${month}-${dayValue}T00:00:00${getTimeZoneOffsetLabel(referenceDate)}`,
   };
 }
 
@@ -113,24 +156,13 @@ export function formatDateTimeLocalInTimeZone(value: string, timeZone: string) {
   return `${year}-${month}-${day}T${hour}:${minute}`;
 }
 
-export function createDefaultBookingValues(roomId?: string) {
-  const { date } = getAmsterdamScheduleDayBounds();
+export function createDefaultBookingValues(day: ScheduleDay, roomId?: string) {
+  const { date } = getAmsterdamScheduleDayBounds(day);
   const fallbackRoomId = ROOMS[0]?.id ?? "";
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    hour: "2-digit",
-    hour12: false,
-    timeZone: GOOGLE_CALENDAR_TIME_ZONE,
-  }).formatToParts(getScheduleDayReferenceDate());
-  const hourValue = parts.find((part) => part.type === "hour")?.value;
-
-  if (!hourValue) {
-    throw new Error("Unable to determine the schedule hour in Amsterdam.");
-  }
-
-  const nowHour = Number(hourValue);
+  const { hour } = getAmsterdamHourParts(getScheduleDayReferenceDate(day));
   const minHour = HOURS[0];
   const maxHour = HOURS[HOURS.length - 1];
-  const startHour = Math.min(Math.max(nowHour + 1, minHour), maxHour);
+  const startHour = Math.min(Math.max(hour + 1, minHour), maxHour);
   const endHour = Math.min(startHour + 1, maxHour + 1);
 
   return {

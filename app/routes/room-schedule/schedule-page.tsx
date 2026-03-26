@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import {
   Form,
   Link,
@@ -15,17 +16,107 @@ import { HOURS, ROOMS, formatHour } from "../../data/rooms";
 import { ACCENT, HEADER_HEIGHT, HOUR_WIDTH, ROW_HEIGHT, getRoomColor } from "./schedule-styles";
 import {
   createDefaultBookingValues,
+  DEFAULT_SCHEDULE_DAY,
+  formatScheduleDayLabel,
   formatBookingWindow,
   formatScheduleDate,
-  SCHEDULE_DAY_LABEL,
+  getCurrentTimeOffset,
 } from "./schedule-time";
-import type { ActionData, LoaderData, ModalState, ScheduleBooking } from "./schedule-types";
+import type {
+  ActionData,
+  LoaderData,
+  ModalState,
+  ScheduleBooking,
+  ScheduleDay,
+} from "./schedule-types";
 
 export function SchedulePage() {
-  const { bookings, isAuthenticated, roomCalendarIds, roomCount } = useLoaderData<LoaderData>();
+  const { bookings, isAuthenticated, roomCalendarIds, roomCount, scheduleDay } =
+    useLoaderData<LoaderData>();
   const actionData = useActionData<ActionData>();
   const navigation = useNavigation();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [todayNow, setTodayNow] = useState<number | null>(getCurrentTimeOffset);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const hasAutoScrolledRef = useRef(false);
+
+  useEffect(() => {
+    hasAutoScrolledRef.current = false;
+
+    if (scheduleDay !== "today") {
+      return;
+    }
+
+    const id = setInterval(() => {
+      setTodayNow(getCurrentTimeOffset());
+    }, 60_000);
+
+    return () => {
+      clearInterval(id);
+    };
+  }, [scheduleDay]);
+
+  useEffect(() => {
+    if (scheduleDay !== "today" || hasAutoScrolledRef.current || typeof window === "undefined") {
+      return;
+    }
+
+    const scrollContainer = scrollRef.current;
+
+    if (!scrollContainer || !window.matchMedia("(max-width: 767px)").matches) {
+      return;
+    }
+
+    const offset = getCurrentTimeOffset();
+
+    if (offset === null) {
+      return;
+    }
+
+    hasAutoScrolledRef.current = true;
+
+    const frameId = window.requestAnimationFrame(() => {
+      scrollContainer.scrollTo({
+        left: Math.max(offset - scrollContainer.clientWidth / 2, 0),
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [scheduleDay]);
+
+  function setScheduleDay(nextDay: ScheduleDay) {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("bookingId");
+    nextParams.delete("modal");
+    nextParams.delete("roomId");
+
+    if (nextDay === "today") {
+      setTodayNow(getCurrentTimeOffset());
+    }
+
+    if (nextDay === DEFAULT_SCHEDULE_DAY) {
+      nextParams.delete("day");
+    } else {
+      nextParams.set("day", nextDay);
+    }
+
+    setSearchParams(nextParams);
+  }
+
+  function scrollToNow() {
+    const offset = getCurrentTimeOffset();
+
+    if (scheduleDay !== "today" || offset === null || !scrollRef.current) {
+      return;
+    }
+
+    scrollRef.current.scrollTo({
+      behavior: "smooth",
+      left: Math.max(offset - scrollRef.current.clientWidth / 2, 0),
+    });
+  }
 
   function openCreateModal(nextRoomId?: string) {
     const nextParams = new URLSearchParams(searchParams);
@@ -86,7 +177,7 @@ export function SchedulePage() {
           values:
             defaultActionValues?.intent === "create"
               ? defaultActionValues
-              : createDefaultBookingValues(requestedRoomId),
+              : createDefaultBookingValues(scheduleDay, requestedRoomId),
         }
       : modalKind === "edit" && selectedBooking
         ? {
@@ -117,6 +208,9 @@ export function SchedulePage() {
           : null;
   const isSubmitting = navigation.state === "submitting";
   const isDeleting = isSubmitting && submittedIntent === "delete";
+  const isTodayView = scheduleDay === "today";
+  const now = isTodayView ? todayNow : null;
+  const scheduleDayLabel = formatScheduleDayLabel(scheduleDay);
   const fallbackActiveRoomId = writableRooms[0]?.id || ROOMS[0]?.id || "";
   const activeRoomId =
     modalState && modalState.values.roomId.length > 0
@@ -133,31 +227,68 @@ export function SchedulePage() {
           <h1 className="text-sm font-semibold tracking-tight text-gray-900 md:text-lg">
             Room Schedule
           </h1>
-          <p className="text-xs font-medium text-gray-500 md:text-sm">{formatScheduleDate()}</p>
+          <p className="text-xs font-medium text-gray-500 md:text-sm">
+            {formatScheduleDate(scheduleDay)}
+          </p>
         </div>
-        {isAuthenticated ? (
-          <div className="flex shrink-0 items-center gap-1.5 md:gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 md:gap-2">
+          <div className="flex items-center rounded-lg border border-gray-200 bg-gray-50 p-0.5">
+            {(["today", "tomorrow"] as const).map((day) => {
+              const isActive = day === scheduleDay;
+
+              return (
+                <Button
+                  key={day}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setScheduleDay(day);
+                  }}
+                  className={
+                    isActive
+                      ? "bg-white text-gray-900 shadow-sm hover:bg-white"
+                      : "text-gray-500 hover:bg-transparent hover:text-gray-700"
+                  }
+                >
+                  {day === "today" ? "Today" : "Tomorrow"}
+                </Button>
+              );
+            })}
+          </div>
+          {isAuthenticated ? (
+            <>
+              <Button
+                size="sm"
+                onClick={() => {
+                  openCreateModal();
+                }}
+                className="md:px-3 md:py-1.5 md:text-sm"
+                style={{ backgroundColor: ACCENT }}
+              >
+                New booking
+              </Button>
+              {isTodayView ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={scrollToNow}
+                  className="md:px-3 md:py-1.5 md:text-sm"
+                >
+                  Now
+                </Button>
+              ) : null}
+            </>
+          ) : (
             <Button
               size="sm"
-              onClick={() => {
-                openCreateModal();
-              }}
+              asChild
               className="md:px-3 md:py-1.5 md:text-sm"
               style={{ backgroundColor: ACCENT }}
             >
-              New booking
+              <Link to="/auth/google">Connect Google</Link>
             </Button>
-          </div>
-        ) : (
-          <Button
-            size="sm"
-            asChild
-            className="shrink-0 md:px-3 md:py-1.5 md:text-sm"
-            style={{ backgroundColor: ACCENT }}
-          >
-            <Link to="/auth/google">Connect Google</Link>
-          </Button>
-        )}
+          )}
+        </div>
       </header>
 
       <div className="flex" style={{ height: "calc(100vh - 53px)" }}>
@@ -185,7 +316,7 @@ export function SchedulePage() {
           })}
         </div>
 
-        <div className="flex-1 overflow-x-auto">
+        <div className="flex-1 overflow-x-auto" ref={scrollRef}>
           <div style={{ position: "relative", width: totalWidth }}>
             <div className="flex border-b border-gray-200" style={{ height: HEADER_HEIGHT }}>
               {HOURS.map((hour) => (
@@ -271,6 +402,26 @@ export function SchedulePage() {
               );
             })}
 
+            {isTodayView && now !== null ? (
+              <div
+                className="pointer-events-none absolute"
+                style={{
+                  backgroundColor: "#EF4444",
+                  bottom: 0,
+                  height: HEADER_HEIGHT + ROOMS.length * ROW_HEIGHT,
+                  left: now,
+                  top: 0,
+                  width: 2,
+                  zIndex: 20,
+                }}
+              >
+                <div
+                  className="absolute -top-1 -left-1.5 h-3 w-3 rounded-full"
+                  style={{ backgroundColor: "#EF4444" }}
+                />
+              </div>
+            ) : null}
+
             {!isAuthenticated ? (
               <div className="absolute inset-0 flex items-center justify-center bg-white/72 backdrop-blur-[1px]">
                 <div className="rounded-xl border border-gray-200 bg-white px-6 py-5 text-center shadow-lg">
@@ -291,10 +442,10 @@ export function SchedulePage() {
               <div className="absolute inset-0 flex items-center justify-center bg-white/60">
                 <div className="rounded-xl border border-gray-200 bg-white px-6 py-5 text-center shadow-sm">
                   <p className="text-base font-semibold text-gray-900">
-                    No bookings {SCHEDULE_DAY_LABEL}
+                    No bookings {scheduleDayLabel}
                   </p>
                   <p className="mt-2 text-sm text-gray-500">
-                    Checked {String(roomCount)} room calendars for {SCHEDULE_DAY_LABEL} in Amsterdam
+                    Checked {String(roomCount)} room calendars for {scheduleDayLabel} in Amsterdam
                     time.
                   </p>
                 </div>

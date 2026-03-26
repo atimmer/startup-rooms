@@ -3,14 +3,16 @@ import { redirect } from "react-router";
 
 import { HOURS, ROOMS } from "../../data/rooms";
 import {
+  DEFAULT_SCHEDULE_DAY,
   GOOGLE_CALENDAR_TIME_ZONE,
   clampHour,
   convertDateTimeLocalToTimeZoneIso,
+  formatScheduleDayLabel,
   formatDateTimeLocalInTimeZone,
   getAmsterdamScheduleDayBounds,
   getHourValue,
   parseDateTimeLocal,
-  SCHEDULE_DAY_LABEL,
+  parseScheduleDay,
 } from "./schedule-time";
 import type {
   ActionData,
@@ -20,6 +22,7 @@ import type {
   RoomCalendarCandidate,
   RoomCalendarEntry,
   ScheduleBooking,
+  ScheduleDay,
 } from "./schedule-types";
 
 function normalizeCalendarSummary(value: string) {
@@ -115,8 +118,17 @@ function buildActionError(error: string, defaultValues: ModalValues) {
   } satisfies ActionData;
 }
 
+function buildScheduleLocation(scheduleDay: ScheduleDay) {
+  if (scheduleDay === DEFAULT_SCHEDULE_DAY) {
+    return "/";
+  }
+
+  return `/?day=${scheduleDay}`;
+}
+
 export async function loadScheduleData(request: Request): Promise<LoaderData> {
   const { commitSession, getSession, readGoogleSession } = await import("../../lib/session.server");
+  const scheduleDay = parseScheduleDay(new URL(request.url).searchParams.get("day"));
   const session = await getSession(request);
   const googleSession = readGoogleSession(session);
 
@@ -129,13 +141,14 @@ export async function loadScheduleData(request: Request): Promise<LoaderData> {
       isAuthenticated: false,
       roomCalendarIds: {},
       roomCount: ROOMS.length,
+      scheduleDay,
     } satisfies LoaderData;
   }
 
   const { calendar, refreshedTokens, roomCalendars } = await loadRoomCalendars(
     googleSession.googleTokens,
   );
-  const { date, timeMax, timeMin } = getAmsterdamScheduleDayBounds();
+  const { date, timeMax, timeMin } = getAmsterdamScheduleDayBounds(scheduleDay);
   const roomCalendarIds = buildRoomCalendarIds(roomCalendars);
   const bookingGroups = await Promise.all(
     roomCalendars.map(async ({ calendarId, room }) => {
@@ -203,11 +216,13 @@ export async function loadScheduleData(request: Request): Promise<LoaderData> {
     isAuthenticated: true,
     roomCalendarIds,
     roomCount: roomCalendars.length,
+    scheduleDay,
   } satisfies LoaderData;
 }
 
 export async function mutateScheduleBooking(request: Request) {
   const { commitSession, getSession, readGoogleSession } = await import("../../lib/session.server");
+  const scheduleDay = parseScheduleDay(new URL(request.url).searchParams.get("day"));
   const session = await getSession(request);
   const googleSession = readGoogleSession(session);
 
@@ -285,7 +300,7 @@ export async function mutateScheduleBooking(request: Request) {
 
       session.set("googleTokens", refreshedTokens);
 
-      return redirect("/", {
+      return redirect(buildScheduleLocation(scheduleDay), {
         headers: {
           "Set-Cookie": await commitSession(session),
         },
@@ -315,7 +330,7 @@ export async function mutateScheduleBooking(request: Request) {
     return buildActionError("End time must be later than start time.", defaultValues);
   }
 
-  const scheduleDayInAmsterdam = getAmsterdamScheduleDayBounds().date;
+  const scheduleDayInAmsterdam = getAmsterdamScheduleDayBounds(scheduleDay).date;
   const startDateLabel = formatDateTimeLocalInTimeZone(
     startDate.toISOString(),
     GOOGLE_CALENDAR_TIME_ZONE,
@@ -327,7 +342,7 @@ export async function mutateScheduleBooking(request: Request) {
 
   if (startDateLabel !== scheduleDayInAmsterdam || endDateLabel !== scheduleDayInAmsterdam) {
     return buildActionError(
-      `This board only manages bookings for ${SCHEDULE_DAY_LABEL} in Amsterdam time.`,
+      `This board only manages bookings for ${formatScheduleDayLabel(scheduleDay)} in Amsterdam time.`,
       defaultValues,
     );
   }
@@ -393,7 +408,7 @@ export async function mutateScheduleBooking(request: Request) {
 
     session.set("googleTokens", refreshedTokens);
 
-    return redirect("/", {
+    return redirect(buildScheduleLocation(scheduleDay), {
       headers: {
         "Set-Cookie": await commitSession(session),
       },
