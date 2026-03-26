@@ -98,4 +98,4 @@ SESSION_SECRET=replace-with-a-long-random-string
 GOOGLE_ROOM_CALENDAR_ID=room-calendar@example.com
 ```
 
-Then run `pnpm dev` and open `/google-calendar`.
+Then run `pnpm dev` and open `/`.

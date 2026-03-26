@@ -44,7 +44,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   });
   session.set("googleUser", result.user);
 
-  return redirect("/google-calendar", {
+  return redirect("/", {
     headers: {
       "Set-Cookie": await commitSession(session),
     },

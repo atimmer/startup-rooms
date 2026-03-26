@@ -6,7 +6,7 @@ export async function action({ request }: Route.ActionArgs) {
   const { destroySession, getSession } = await import("../lib/session.server");
   const session = await getSession(request);
 
-  return redirect("/google-calendar", {
+  return redirect("/", {
     headers: {
       "Set-Cookie": await destroySession(session),
     },
