@@ -34,6 +34,21 @@ export function SchedulePage() {
   const [pendingIntent, setPendingIntent] = useState<"create" | "delete" | "update" | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasAutoScrolledRef = useRef(false);
+  const [tooltipRoomId, setTooltipRoomId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!tooltipRoomId) return;
+
+    const dismiss = () => {
+      setTooltipRoomId(null);
+    };
+
+    document.addEventListener("click", dismiss);
+
+    return () => {
+      document.removeEventListener("click", dismiss);
+    };
+  }, [tooltipRoomId]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -272,17 +287,35 @@ export function SchedulePage() {
           <div className="border-b border-gray-200" style={{ height: HEADER_HEIGHT }} />
           {ROOMS.map((room) => {
             const color = getRoomColor(room.id);
+            const isTooltipOpen = tooltipRoomId === room.id;
 
             return (
               <div
                 key={room.id}
-                className="flex items-center justify-center gap-3 border-b border-gray-100 px-1 md:justify-start md:px-4"
+                className="relative flex items-center justify-center gap-3 border-b border-gray-100 px-1 md:justify-start md:px-4"
                 style={{ height: ROW_HEIGHT }}
               >
-                <div
-                  className="h-3 w-3 shrink-0 rounded-full"
-                  style={{ backgroundColor: color.border }}
-                />
+                <button
+                  type="button"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full md:h-3 md:w-3 md:cursor-default"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setTooltipRoomId(isTooltipOpen ? null : room.id);
+                  }}
+                >
+                  <div
+                    className="h-3 w-3 shrink-0 rounded-full"
+                    style={{ backgroundColor: color.border }}
+                  />
+                </button>
+                {isTooltipOpen && (
+                  <div
+                    className="absolute left-10 z-30 whitespace-nowrap rounded-lg border border-gray-200 bg-white px-3 py-1.5 shadow-lg md:hidden"
+                  >
+                    <p className="text-sm font-semibold leading-tight">{room.name}</p>
+                    <p className="text-xs text-gray-400">{room.capacityLabel}</p>
+                  </div>
+                )}
                 <div className="hidden min-w-0 md:block">
                   <p className="truncate text-sm font-semibold leading-tight">{room.name}</p>
                   <p className="text-xs text-gray-400">{room.capacityLabel}</p>
