@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { ComponentProps } from "react";
 import {
   Form,
   Link,
@@ -21,6 +22,8 @@ import {
 } from "./schedule-time";
 import type { ActionData, LoaderData, ModalState, ScheduleBooking } from "./schedule-types";
 
+type FormSubmitEvent = Parameters<NonNullable<ComponentProps<typeof Form>["onSubmit"]>>[0];
+
 export function SchedulePage() {
   const { bookings, currentUserEmail, isAuthenticated, roomCalendarIds, roomCount } =
     useLoaderData<LoaderData>();
@@ -28,6 +31,7 @@ export function SchedulePage() {
   const navigation = useNavigation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [now, setNow] = useState(getCurrentTimeOffset);
+  const [pendingIntent, setPendingIntent] = useState<"create" | "delete" | "update" | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasAutoScrolledRef = useRef(false);
 
@@ -86,6 +90,7 @@ export function SchedulePage() {
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete("bookingId");
     nextParams.set("modal", "create");
+    setPendingIntent(null);
 
     if (nextRoomId) {
       nextParams.set("roomId", nextRoomId);
@@ -101,6 +106,7 @@ export function SchedulePage() {
     nextParams.delete("roomId");
     nextParams.set("bookingId", nextBookingId);
     nextParams.set("modal", "edit");
+    setPendingIntent(null);
     setSearchParams(nextParams);
   }
 
@@ -109,6 +115,7 @@ export function SchedulePage() {
     nextParams.delete("bookingId");
     nextParams.delete("modal");
     nextParams.delete("roomId");
+    setPendingIntent(null);
     setSearchParams(nextParams);
   }
 
@@ -170,8 +177,10 @@ export function SchedulePage() {
         : navigation.formData?.get("intent") === "update"
           ? "update"
           : null;
-  const isSubmitting = navigation.state === "submitting";
-  const isDeleting = isSubmitting && submittedIntent === "delete";
+  const effectivePendingIntent = modalState === null || actionData?.error ? null : pendingIntent;
+  const activeIntent = effectivePendingIntent ?? submittedIntent;
+  const isSubmitting = effectivePendingIntent !== null || navigation.state === "submitting";
+  const isDeleting = isSubmitting && activeIntent === "delete";
   const fallbackActiveRoomId = writableRooms[0]?.id || ROOMS[0]?.id || "";
   const activeRoomId =
     modalState && modalState.values.roomId.length > 0
@@ -185,6 +194,33 @@ export function SchedulePage() {
       sensitivity: "accent",
       usage: "search",
     }) === 0;
+
+  function handleFormSubmit(event: FormSubmitEvent) {
+    const nativeEvent = event.nativeEvent;
+
+    if (!(nativeEvent instanceof SubmitEvent)) {
+      return;
+    }
+
+    const submitter = nativeEvent.submitter;
+
+    if (!(submitter instanceof HTMLButtonElement) && !(submitter instanceof HTMLInputElement)) {
+      return;
+    }
+
+    const intent =
+      submitter.value === "delete"
+        ? "delete"
+        : submitter.value === "create"
+          ? "create"
+          : submitter.value === "update"
+            ? "update"
+            : null;
+
+    if (intent) {
+      setPendingIntent(intent);
+    }
+  }
 
   return (
     <div
@@ -443,7 +479,7 @@ export function SchedulePage() {
               )}
             </div>
 
-            <Form method="post">
+            <Form method="post" onSubmit={handleFormSubmit}>
               {modalState.values.bookingId ? (
                 <input name="bookingId" type="hidden" value={modalState.values.bookingId} />
               ) : null}
@@ -554,9 +590,9 @@ export function SchedulePage() {
                     value={modalState.values.intent}
                   >
                     {isSubmitting
-                      ? submittedIntent === "create"
+                      ? activeIntent === "create"
                         ? "Creating..."
-                        : submittedIntent === "update"
+                        : activeIntent === "update"
                           ? "Saving..."
                           : modalState.kind === "create"
                             ? "Creating..."
