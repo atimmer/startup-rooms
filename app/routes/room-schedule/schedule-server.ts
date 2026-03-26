@@ -7,9 +7,10 @@ import {
   clampHour,
   convertDateTimeLocalToTimeZoneIso,
   formatDateTimeLocalInTimeZone,
-  getAmsterdamDayBounds,
+  getAmsterdamScheduleDayBounds,
   getHourValue,
   parseDateTimeLocal,
+  SCHEDULE_DAY_LABEL,
 } from "./schedule-time";
 import type {
   ActionData,
@@ -134,7 +135,7 @@ export async function loadScheduleData(request: Request): Promise<LoaderData> {
   const { calendar, refreshedTokens, roomCalendars } = await loadRoomCalendars(
     googleSession.googleTokens,
   );
-  const { date, timeMax, timeMin } = getAmsterdamDayBounds();
+  const { date, timeMax, timeMin } = getAmsterdamScheduleDayBounds();
   const roomCalendarIds = buildRoomCalendarIds(roomCalendars);
   const bookingGroups = await Promise.all(
     roomCalendars.map(async ({ calendarId, room }) => {
@@ -314,7 +315,7 @@ export async function mutateScheduleBooking(request: Request) {
     return buildActionError("End time must be later than start time.", defaultValues);
   }
 
-  const todayInAmsterdam = getAmsterdamDayBounds().date;
+  const scheduleDayInAmsterdam = getAmsterdamScheduleDayBounds().date;
   const startDateLabel = formatDateTimeLocalInTimeZone(
     startDate.toISOString(),
     GOOGLE_CALENDAR_TIME_ZONE,
@@ -324,9 +325,9 @@ export async function mutateScheduleBooking(request: Request) {
     GOOGLE_CALENDAR_TIME_ZONE,
   ).slice(0, 10);
 
-  if (startDateLabel !== todayInAmsterdam || endDateLabel !== todayInAmsterdam) {
+  if (startDateLabel !== scheduleDayInAmsterdam || endDateLabel !== scheduleDayInAmsterdam) {
     return buildActionError(
-      "This board only manages bookings for today in Amsterdam time.",
+      `This board only manages bookings for ${SCHEDULE_DAY_LABEL} in Amsterdam time.`,
       defaultValues,
     );
   }

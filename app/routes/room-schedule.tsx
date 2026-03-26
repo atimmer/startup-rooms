@@ -2,13 +2,14 @@ import type { Route } from "./+types/room-schedule";
 import type { ShouldRevalidateFunctionArgs } from "react-router";
 import { SchedulePage } from "./room-schedule/schedule-page";
 import { loadScheduleData, mutateScheduleBooking } from "./room-schedule/schedule-server";
+import { SCHEDULE_DAY_LABEL } from "./room-schedule/schedule-time";
 
 const MODAL_SEARCH_PARAM_KEYS = ["bookingId", "modal", "roomId"] as const;
 
 export function meta(_args: Route.MetaArgs) {
   return [
     { title: "Meeting Rooms" },
-    { name: "description", content: "Live room schedule for today." },
+    { name: "description", content: `Live room schedule for ${SCHEDULE_DAY_LABEL}.` },
   ];
 }
 

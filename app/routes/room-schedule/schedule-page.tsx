@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from "react";
 import {
   Form,
   Link,
@@ -18,7 +17,7 @@ import {
   createDefaultBookingValues,
   formatBookingWindow,
   formatScheduleDate,
-  getCurrentTimeOffset,
+  SCHEDULE_DAY_LABEL,
 } from "./schedule-time";
 import type { ActionData, LoaderData, ModalState, ScheduleBooking } from "./schedule-types";
 
@@ -27,60 +26,6 @@ export function SchedulePage() {
   const actionData = useActionData<ActionData>();
   const navigation = useNavigation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [now, setNow] = useState(getCurrentTimeOffset);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const hasAutoScrolledRef = useRef(false);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setNow(getCurrentTimeOffset());
-    }, 60_000);
-
-    return () => {
-      clearInterval(id);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (hasAutoScrolledRef.current || typeof window === "undefined") {
-      return;
-    }
-
-    const scrollContainer = scrollRef.current;
-
-    if (!scrollContainer || !window.matchMedia("(max-width: 767px)").matches) {
-      return;
-    }
-
-    const offset = getCurrentTimeOffset();
-
-    if (offset === null) {
-      return;
-    }
-
-    hasAutoScrolledRef.current = true;
-
-    const frameId = window.requestAnimationFrame(() => {
-      scrollContainer.scrollTo({
-        left: Math.max(offset - scrollContainer.clientWidth / 2, 0),
-      });
-    });
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-    };
-  }, []);
-
-  function scrollToNow() {
-    const offset = getCurrentTimeOffset();
-
-    if (offset !== null && scrollRef.current) {
-      scrollRef.current.scrollTo({
-        behavior: "smooth",
-        left: Math.max(offset - scrollRef.current.clientWidth / 2, 0),
-      });
-    }
-  }
 
   function openCreateModal(nextRoomId?: string) {
     const nextParams = new URLSearchParams(searchParams);
@@ -202,14 +147,6 @@ export function SchedulePage() {
             >
               New booking
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={scrollToNow}
-              className="md:px-3 md:py-1.5 md:text-sm"
-            >
-              Now
-            </Button>
           </div>
         ) : (
           <Button
@@ -248,7 +185,7 @@ export function SchedulePage() {
           })}
         </div>
 
-        <div className="flex-1 overflow-x-auto" ref={scrollRef}>
+        <div className="flex-1 overflow-x-auto">
           <div style={{ position: "relative", width: totalWidth }}>
             <div className="flex border-b border-gray-200" style={{ height: HEADER_HEIGHT }}>
               {HOURS.map((hour) => (
@@ -334,26 +271,6 @@ export function SchedulePage() {
               );
             })}
 
-            {now !== null ? (
-              <div
-                className="pointer-events-none absolute"
-                style={{
-                  backgroundColor: "#EF4444",
-                  bottom: 0,
-                  height: HEADER_HEIGHT + ROOMS.length * ROW_HEIGHT,
-                  left: now,
-                  top: 0,
-                  width: 2,
-                  zIndex: 20,
-                }}
-              >
-                <div
-                  className="absolute -top-1 -left-1.5 h-3 w-3 rounded-full"
-                  style={{ backgroundColor: "#EF4444" }}
-                />
-              </div>
-            ) : null}
-
             {!isAuthenticated ? (
               <div className="absolute inset-0 flex items-center justify-center bg-white/72 backdrop-blur-[1px]">
                 <div className="rounded-xl border border-gray-200 bg-white px-6 py-5 text-center shadow-lg">
@@ -373,9 +290,12 @@ export function SchedulePage() {
             {isAuthenticated && bookings.length === 0 ? (
               <div className="absolute inset-0 flex items-center justify-center bg-white/60">
                 <div className="rounded-xl border border-gray-200 bg-white px-6 py-5 text-center shadow-sm">
-                  <p className="text-base font-semibold text-gray-900">No bookings today</p>
+                  <p className="text-base font-semibold text-gray-900">
+                    No bookings {SCHEDULE_DAY_LABEL}
+                  </p>
                   <p className="mt-2 text-sm text-gray-500">
-                    Checked {String(roomCount)} room calendars for today in Amsterdam time.
+                    Checked {String(roomCount)} room calendars for {SCHEDULE_DAY_LABEL} in Amsterdam
+                    time.
                   </p>
                 </div>
               </div>
