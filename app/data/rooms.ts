@@ -10,7 +10,7 @@ export interface Booking {
   id: string;
   roomId: string;
   title: string;
-  organizer: string;
+  creator: string;
   startHour: number;
   endHour: number;
   date: string;

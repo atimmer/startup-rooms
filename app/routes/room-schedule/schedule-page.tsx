@@ -16,7 +16,6 @@ import { HOURS, ROOMS, formatHour } from "../../data/rooms";
 import { ACCENT, HEADER_HEIGHT, HOUR_WIDTH, ROW_HEIGHT, getRoomColor } from "./schedule-styles";
 import {
   createDefaultBookingValues,
-  formatBookingWindow,
   formatScheduleDate,
   getCurrentTimeOffset,
 } from "./schedule-time";
@@ -311,7 +310,7 @@ export function SchedulePage() {
                             className="truncate text-xs"
                             style={{ color: color.text, opacity: 0.7 }}
                           >
-                            {booking.organizer}
+                            {ROOMS.find((r) => r.id === booking.roomId)?.name}
                           </p>
                         </div>
                       </button>
@@ -421,14 +420,10 @@ export function SchedulePage() {
               {modalState.kind === "edit" ? (
                 <>
                   <p className="text-sm text-gray-600">
-                    <span className="font-medium">Organizer:</span> {modalState.booking.organizer}
+                    <span className="font-medium">Creator:</span> {modalState.booking.creator}
                   </p>
                   <p className="text-sm text-gray-600">
-                    <span className="font-medium">Current slot:</span>{" "}
-                    {formatBookingWindow(modalState.booking.startHour, modalState.booking.endHour)}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    <span className="font-medium">Current room:</span>{" "}
+                    <span className="font-medium">Room:</span>{" "}
                     {ROOMS.find((room) => room.id === modalState.booking.roomId)?.name}
                   </p>
                 </>
