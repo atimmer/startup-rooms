@@ -264,6 +264,7 @@ export function SchedulePage() {
       sensitivity: "accent",
       usage: "search",
     }) === 0;
+  const isRefreshingSchedule = revalidator.state === "loading";
 
   function handleFormSubmit(event: FormSubmitEvent) {
     const nativeEvent = event.nativeEvent;
@@ -304,37 +305,48 @@ export function SchedulePage() {
           </h1>
           <p className="text-xs font-medium text-gray-500 md:text-sm">{formatScheduleDate()}</p>
         </div>
-        {isAuthenticated ? (
-          <div className="flex shrink-0 items-center gap-1.5 md:gap-2">
+        <div className="flex shrink-0 items-center gap-2 md:gap-3">
+          {isRefreshingSchedule ? (
+            <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-500">
+              <span
+                className="h-2 w-2 animate-pulse rounded-full"
+                style={{ backgroundColor: ACCENT }}
+              />
+              <span>Refreshing…</span>
+            </div>
+          ) : null}
+          {isAuthenticated ? (
+            <div className="flex items-center gap-1.5 md:gap-2">
+              <Button
+                size="sm"
+                onClick={() => {
+                  openCreateModal();
+                }}
+                className="md:px-3 md:py-1.5 md:text-sm"
+                style={{ backgroundColor: ACCENT }}
+              >
+                New booking
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={scrollToNow}
+                className="md:px-3 md:py-1.5 md:text-sm"
+              >
+                Now
+              </Button>
+            </div>
+          ) : (
             <Button
               size="sm"
-              onClick={() => {
-                openCreateModal();
-              }}
+              asChild
               className="md:px-3 md:py-1.5 md:text-sm"
               style={{ backgroundColor: ACCENT }}
             >
-              New booking
+              <Link to="/auth/google">Connect Google</Link>
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={scrollToNow}
-              className="md:px-3 md:py-1.5 md:text-sm"
-            >
-              Now
-            </Button>
-          </div>
-        ) : (
-          <Button
-            size="sm"
-            asChild
-            className="shrink-0 md:px-3 md:py-1.5 md:text-sm"
-            style={{ backgroundColor: ACCENT }}
-          >
-            <Link to="/auth/google">Connect Google</Link>
-          </Button>
-        )}
+          )}
+        </div>
       </header>
 
       <div className="flex" style={{ height: "calc(100vh - 53px)" }}>
