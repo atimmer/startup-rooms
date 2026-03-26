@@ -21,6 +21,21 @@ import type {
   ScheduleBooking,
 } from "./schedule-types";
 
+function resolveCreator(event: calendar_v3.Schema$Event): string {
+  const candidates = [
+    event.creator?.displayName,
+    event.creator?.email,
+    event.organizer?.displayName,
+    event.organizer?.email,
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate) return candidate;
+  }
+
+  return "Google Calendar";
+}
+
 function normalizeCalendarSummary(value: string) {
   return value
     .normalize("NFKD")
@@ -169,12 +184,7 @@ export async function loadScheduleData(request: Request): Promise<LoaderData> {
             endHour,
             endLocal: formatDateTimeLocalInTimeZone(event.end.dateTime, GOOGLE_CALENDAR_TIME_ZONE),
             id: event.id,
-            creator:
-              event.creator?.displayName ??
-              event.creator?.email ??
-              event.organizer?.displayName ??
-              event.organizer?.email ??
-              "Google Calendar",
+            creator: resolveCreator(event),
             roomId: room.id,
             startHour,
             startLocal: formatDateTimeLocalInTimeZone(
