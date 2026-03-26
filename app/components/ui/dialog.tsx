@@ -26,7 +26,7 @@ const DialogContent = forwardRef<HTMLDivElement, ComponentProps<typeof DialogPri
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-6 shadow-2xl",
+          "fixed inset-x-0 bottom-0 z-50 w-full max-w-md mx-auto max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-t-xl bg-white p-6 shadow-2xl sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl",
           className,
         )}
         {...props}
