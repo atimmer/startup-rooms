@@ -15,6 +15,7 @@
     "typecheck": "react-router typegen && tsc"
   },
   "dependencies": {
+    "@js-temporal/polyfill": "^0.5.1",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-slot": "^1.2.4",

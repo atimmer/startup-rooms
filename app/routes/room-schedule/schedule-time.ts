@@ -1,13 +1,23 @@
+import { Temporal } from "@js-temporal/polyfill";
+
 import { HOURS, ROOMS, formatHour } from "../../data/rooms";
 import { HOUR_WIDTH } from "./schedule-styles";
 import type { ModalValues } from "./schedule-types";
 
 export const GOOGLE_CALENDAR_TIME_ZONE = "Europe/Amsterdam";
 
+function getCurrentAmsterdamDateTime() {
+  return Temporal.Now.zonedDateTimeISO(GOOGLE_CALENDAR_TIME_ZONE);
+}
+
+function getTimeZoneDateTimeForInstant(value: string, timeZone: string) {
+  return Temporal.Instant.from(value).toZonedDateTimeISO(timeZone);
+}
+
 export function getCurrentTimeOffset(): number | null {
-  const now = new Date();
-  const h = now.getHours();
-  const m = now.getMinutes();
+  const now = getCurrentAmsterdamDateTime();
+  const h = now.hour;
+  const m = now.minute;
   const startHour = HOURS[0];
   const endHour = HOURS[HOURS.length - 1] + 1;
 
@@ -19,7 +29,7 @@ export function getCurrentTimeOffset(): number | null {
 }
 
 export function formatScheduleDate() {
-  return new Date().toLocaleDateString("en-US", {
+  return getCurrentAmsterdamDateTime().toLocaleString("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -31,62 +41,20 @@ export function formatBookingWindow(startHour: number, endHour: number) {
   return `${formatHour(startHour)} - ${formatHour(endHour)}`;
 }
 
-export function getOffsetLabelForTimeZone(timeZone: string, date: Date) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    timeZoneName: "longOffset",
-  }).formatToParts(date);
-  const offset = parts.find((part) => part.type === "timeZoneName")?.value;
-
-  if (!offset) {
-    throw new Error(`Unable to determine time zone offset for ${timeZone}.`);
-  }
-
-  return offset.replace("GMT", "");
-}
-
-export function getTimeZoneOffsetLabel(date: Date) {
-  return getOffsetLabelForTimeZone(GOOGLE_CALENDAR_TIME_ZONE, date);
-}
-
 export function getAmsterdamDayBounds() {
-  const now = new Date();
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    day: "2-digit",
-    month: "2-digit",
-    timeZone: GOOGLE_CALENDAR_TIME_ZONE,
-    year: "numeric",
-  }).formatToParts(now);
-  const year = parts.find((part) => part.type === "year")?.value;
-  const month = parts.find((part) => part.type === "month")?.value;
-  const day = parts.find((part) => part.type === "day")?.value;
-
-  if (!year || !month || !day) {
-    throw new Error("Unable to determine current date in Amsterdam.");
-  }
+  const now = getCurrentAmsterdamDateTime();
 
   return {
-    date: `${year}-${month}-${day}`,
-    timeMax: `${year}-${month}-${day}T23:59:59${getTimeZoneOffsetLabel(now)}`,
-    timeMin: `${year}-${month}-${day}T00:00:00${getTimeZoneOffsetLabel(now)}`,
+    date: now.toPlainDate().toString(),
+    timeMax: now.withPlainTime("23:59:59").toString({ timeZoneName: "never" }),
+    timeMin: now.startOfDay().toString({ timeZoneName: "never" }),
   };
 }
 
 export function getHourValue(dateTime: string) {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    hour: "2-digit",
-    hour12: false,
-    minute: "2-digit",
-    timeZone: GOOGLE_CALENDAR_TIME_ZONE,
-  }).formatToParts(new Date(dateTime));
-  const hourValue = parts.find((part) => part.type === "hour")?.value;
-  const minuteValue = parts.find((part) => part.type === "minute")?.value;
+  const dateTimeInAmsterdam = getTimeZoneDateTimeForInstant(dateTime, GOOGLE_CALENDAR_TIME_ZONE);
 
-  if (!hourValue || !minuteValue) {
-    throw new Error(`Unable to parse time value: ${dateTime}`);
-  }
-
-  return Number(hourValue) + Number(minuteValue) / 60;
+  return dateTimeInAmsterdam.hour + dateTimeInAmsterdam.minute / 60;
 }
 
 export function clampHour(value: number) {
@@ -97,44 +65,15 @@ export function clampHour(value: number) {
 }
 
 export function formatDateTimeLocalInTimeZone(value: string, timeZone: string) {
-  const parts = new Intl.DateTimeFormat("sv-SE", {
-    day: "2-digit",
-    hour: "2-digit",
-    hour12: false,
-    minute: "2-digit",
-    month: "2-digit",
-    timeZone,
-    year: "numeric",
-  }).formatToParts(new Date(value));
-  const year = parts.find((part) => part.type === "year")?.value;
-  const month = parts.find((part) => part.type === "month")?.value;
-  const day = parts.find((part) => part.type === "day")?.value;
-  const hour = parts.find((part) => part.type === "hour")?.value;
-  const minute = parts.find((part) => part.type === "minute")?.value;
-
-  if (!year || !month || !day || !hour || !minute) {
-    throw new Error(`Unable to format date time value: ${value}`);
-  }
-
-  return `${year}-${month}-${day}T${hour}:${minute}`;
+  return getTimeZoneDateTimeForInstant(value, timeZone)
+    .toPlainDateTime()
+    .toString({ smallestUnit: "minute" });
 }
 
 export function createDefaultBookingValues(roomId?: string) {
   const { date } = getAmsterdamDayBounds();
   const fallbackRoomId = ROOMS[0]?.id ?? "";
-  const now = new Date();
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    hour: "2-digit",
-    hour12: false,
-    timeZone: GOOGLE_CALENDAR_TIME_ZONE,
-  }).formatToParts(now);
-  const hourValue = parts.find((part) => part.type === "hour")?.value;
-
-  if (!hourValue) {
-    throw new Error("Unable to determine current Amsterdam hour.");
-  }
-
-  const nowHour = Number(hourValue);
+  const nowHour = getCurrentAmsterdamDateTime().hour;
   const minHour = HOURS[0];
   const maxHour = HOURS[HOURS.length - 1];
   const startHour = Math.min(Math.max(nowHour + 1, minHour), maxHour);
@@ -161,11 +100,4 @@ export function parseDateTimeLocal(value: FormDataEntryValue | null) {
   }
 
   return trimmed;
-}
-
-export function convertDateTimeLocalToTimeZoneIso(value: string, timeZone: string) {
-  const date = new Date(`${value}:00Z`);
-  const offset = getOffsetLabelForTimeZone(timeZone, date);
-
-  return `${value}:00${offset}`;
 }
