@@ -36,6 +36,18 @@ function resolveCreator(event: calendar_v3.Schema$Event): string {
   return "Google Calendar";
 }
 
+function resolveCreatorEmail(event: calendar_v3.Schema$Event): string | null {
+  const candidates = [event.creator?.email, event.organizer?.email];
+
+  for (const candidate of candidates) {
+    if (candidate) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
 function normalizeCalendarSummary(value: string) {
   return value
     .normalize("NFKD")
@@ -139,6 +151,7 @@ export async function loadScheduleData(request: Request): Promise<LoaderData> {
 
     return {
       bookings: emptyBookings,
+      currentUserEmail: null,
       headers: null,
       isAuthenticated: false,
       roomCalendarIds: {},
@@ -185,6 +198,7 @@ export async function loadScheduleData(request: Request): Promise<LoaderData> {
             endLocal: formatDateTimeLocalInTimeZone(event.end.dateTime, GOOGLE_CALENDAR_TIME_ZONE),
             id: event.id,
             creator: resolveCreator(event),
+            creatorEmail: resolveCreatorEmail(event),
             roomId: room.id,
             startHour,
             startLocal: formatDateTimeLocalInTimeZone(
@@ -206,6 +220,7 @@ export async function loadScheduleData(request: Request): Promise<LoaderData> {
 
   return {
     bookings,
+    currentUserEmail: googleSession.googleUser.email,
     headers: {
       "Set-Cookie": await commitSession(session),
     },

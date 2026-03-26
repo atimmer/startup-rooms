@@ -10,6 +10,7 @@ export interface GoogleSessionTokens {
 
 export interface ScheduleBooking extends Booking {
   calendarId: string;
+  creatorEmail: string | null;
   endLocal: string;
   startLocal: string;
 }
@@ -28,6 +29,7 @@ export interface RoomCalendarEntry {
 
 export interface LoaderData {
   bookings: ScheduleBooking[];
+  currentUserEmail: string | null;
   headers: { "Set-Cookie": string } | null;
   isAuthenticated: boolean;
   roomCalendarIds: Record<string, string>;

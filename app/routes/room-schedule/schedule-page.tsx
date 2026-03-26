@@ -22,7 +22,8 @@ import {
 import type { ActionData, LoaderData, ModalState, ScheduleBooking } from "./schedule-types";
 
 export function SchedulePage() {
-  const { bookings, isAuthenticated, roomCalendarIds, roomCount } = useLoaderData<LoaderData>();
+  const { bookings, currentUserEmail, isAuthenticated, roomCalendarIds, roomCount } =
+    useLoaderData<LoaderData>();
   const actionData = useActionData<ActionData>();
   const navigation = useNavigation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -176,6 +177,14 @@ export function SchedulePage() {
     modalState && modalState.values.roomId.length > 0
       ? modalState.values.roomId
       : fallbackActiveRoomId;
+  const canDeleteSelectedBooking =
+    modalState?.kind === "edit" &&
+    currentUserEmail !== null &&
+    modalState.booking.creatorEmail !== null &&
+    currentUserEmail.localeCompare(modalState.booking.creatorEmail, undefined, {
+      sensitivity: "accent",
+      usage: "search",
+    }) === 0;
 
   return (
     <div
@@ -511,7 +520,7 @@ export function SchedulePage() {
               ) : null}
 
               <div className="flex justify-between gap-3">
-                {modalState.kind === "edit" ? (
+                {canDeleteSelectedBooking ? (
                   <Button
                     variant="destructive"
                     size="lg"
