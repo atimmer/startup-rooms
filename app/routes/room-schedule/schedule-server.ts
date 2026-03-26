@@ -1,3 +1,4 @@
+import { Temporal } from "@js-temporal/polyfill";
 import type { calendar_v3 } from "googleapis";
 import { redirect } from "react-router";
 
@@ -5,7 +6,6 @@ import { HOURS, ROOMS } from "../../data/rooms";
 import {
   GOOGLE_CALENDAR_TIME_ZONE,
   clampHour,
-  convertDateTimeLocalToTimeZoneIso,
   formatDateTimeLocalInTimeZone,
   getAmsterdamDayBounds,
   getHourValue,
@@ -326,28 +326,24 @@ export async function mutateScheduleBooking(request: Request) {
     return buildActionError("Provide a title, room, start time, and end time.", defaultValues);
   }
 
-  const startDate = new Date(
-    convertDateTimeLocalToTimeZoneIso(startLocal, GOOGLE_CALENDAR_TIME_ZONE),
-  );
-  const endDate = new Date(convertDateTimeLocalToTimeZoneIso(endLocal, GOOGLE_CALENDAR_TIME_ZONE));
+  let startDateTime: Temporal.ZonedDateTime;
+  let endDateTime: Temporal.ZonedDateTime;
 
-  if (Number.isNaN(startDate.valueOf()) || Number.isNaN(endDate.valueOf())) {
+  try {
+    startDateTime =
+      Temporal.PlainDateTime.from(startLocal).toZonedDateTime(GOOGLE_CALENDAR_TIME_ZONE);
+    endDateTime = Temporal.PlainDateTime.from(endLocal).toZonedDateTime(GOOGLE_CALENDAR_TIME_ZONE);
+  } catch {
     return buildActionError("The provided start or end time could not be parsed.", defaultValues);
   }
 
-  if (endDate <= startDate) {
+  if (Temporal.ZonedDateTime.compare(endDateTime, startDateTime) <= 0) {
     return buildActionError("End time must be later than start time.", defaultValues);
   }
 
   const todayInAmsterdam = getAmsterdamDayBounds().date;
-  const startDateLabel = formatDateTimeLocalInTimeZone(
-    startDate.toISOString(),
-    GOOGLE_CALENDAR_TIME_ZONE,
-  ).slice(0, 10);
-  const endDateLabel = formatDateTimeLocalInTimeZone(
-    endDate.toISOString(),
-    GOOGLE_CALENDAR_TIME_ZONE,
-  ).slice(0, 10);
+  const startDateLabel = startDateTime.toPlainDate().toString();
+  const endDateLabel = endDateTime.toPlainDate().toString();
 
   if (startDateLabel !== todayInAmsterdam || endDateLabel !== todayInAmsterdam) {
     return buildActionError(
@@ -372,11 +368,11 @@ export async function mutateScheduleBooking(request: Request) {
 
     const requestBody = {
       end: {
-        dateTime: endDate.toISOString(),
+        dateTime: endDateTime.toInstant().toString(),
         timeZone: GOOGLE_CALENDAR_TIME_ZONE,
       },
       start: {
-        dateTime: startDate.toISOString(),
+        dateTime: startDateTime.toInstant().toString(),
         timeZone: GOOGLE_CALENDAR_TIME_ZONE,
       },
       summary: title,
