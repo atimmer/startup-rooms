@@ -12,7 +12,7 @@
     "prepare": "husky",
     "presubmit": "pnpm test:run && pnpm typecheck && pnpm lint && pnpm format:check",
     "start": "react-router-serve ./build/server/index.js",
-    "test": "vitest",
+    "test": "vitest run",
     "test:run": "vitest run",
     "typecheck": "react-router typegen && tsc"
   },
