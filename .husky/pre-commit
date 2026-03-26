@@ -8,6 +8,7 @@ fail=0
 pnpm presubmit || fail=1
 
 if [ "$fail" -ne 0 ]; then
-  echo "IMPORTANT: These commands might fail when the generation commands haven't been run. So make sure to run \`pnpm --filter ucms generate:types\` and \`pnpm run --filter=@repo/payload-cms-client regenerate\` now."
+  echo "presubmit failed. Fix with: pnpm format && pnpm lint:fix && pnpm typecheck" >&2
+  echo "Or inspect: pnpm presubmit" >&2
   exit 1
 fi
