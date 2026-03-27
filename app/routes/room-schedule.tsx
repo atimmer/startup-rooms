@@ -4,6 +4,16 @@ import { SchedulePage } from "./room-schedule/schedule-page";
 import { loadScheduleData, mutateScheduleBooking } from "./room-schedule/schedule-server";
 
 const MODAL_SEARCH_PARAM_KEYS = ["bookingId", "modal", "roomId"] as const;
+const CLIENT_CACHE_TTL_MS = 60_000;
+
+type ScheduleLoaderData = Awaited<ReturnType<typeof loadScheduleData>>;
+
+interface ClientCacheEntry {
+  cachedAt: number;
+  data: ScheduleLoaderData;
+}
+
+const clientScheduleCache = new Map<string, ClientCacheEntry>();
 
 export function meta(_args: Route.MetaArgs) {
   return [
@@ -29,8 +39,40 @@ export async function loader({ request }: Route.LoaderArgs) {
   return loadScheduleData(request);
 }
 
+function getClientCacheKey(request: Request) {
+  const url = new URL(request.url);
+  return `${url.pathname}?${stripModalSearchParams(url)}`;
+}
+
+export async function clientLoader({ request, serverLoader }: Route.ClientLoaderArgs) {
+  const cacheKey = getClientCacheKey(request);
+  const existingEntry = clientScheduleCache.get(cacheKey);
+  const now = Date.now();
+
+  if (existingEntry && now - existingEntry.cachedAt < CLIENT_CACHE_TTL_MS) {
+    return existingEntry.data;
+  }
+
+  const data = await serverLoader();
+
+  clientScheduleCache.set(cacheKey, {
+    cachedAt: now,
+    data,
+  });
+
+  return data;
+}
+
 export async function action({ request }: Route.ActionArgs) {
   return mutateScheduleBooking(request);
+}
+
+export async function clientAction({ serverAction }: Route.ClientActionArgs) {
+  const response = await serverAction();
+
+  clientScheduleCache.clear();
+
+  return response;
 }
 
 function stripModalSearchParams(url: URL) {
