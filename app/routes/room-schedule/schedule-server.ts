@@ -9,6 +9,7 @@ import {
   formatDateTimeLocalInTimeZone,
   getAmsterdamDayBounds,
   getHourValue,
+  getTodayAmsterdamDate,
   parseDateTimeLocal,
 } from "./schedule-time";
 import type {
@@ -145,15 +146,21 @@ export async function loadScheduleData(request: Request): Promise<LoaderData> {
   const { commitSession, getSession, readGoogleSession } = await import("../../lib/session.server");
   const session = await getSession(request);
   const googleSession = readGoogleSession(session);
+  const url = new URL(request.url);
+  const dateParam = url.searchParams.get("date") ?? undefined;
+  const todayDate = getTodayAmsterdamDate();
 
   if (!googleSession) {
     const emptyBookings: ScheduleBooking[] = [];
+    const resolvedDate = dateParam ?? todayDate;
 
     return {
       bookings: emptyBookings,
       currentUserEmail: null,
+      date: resolvedDate,
       headers: null,
       isAuthenticated: false,
+      isToday: resolvedDate === todayDate,
       roomCalendarIds: {},
       roomCount: ROOMS.length,
     } satisfies LoaderData;
@@ -162,7 +169,7 @@ export async function loadScheduleData(request: Request): Promise<LoaderData> {
   const { calendar, refreshedTokens, roomCalendars } = await loadRoomCalendars(
     googleSession.googleTokens,
   );
-  const { date, timeMax, timeMin } = getAmsterdamDayBounds();
+  const { date, timeMax, timeMin } = getAmsterdamDayBounds(dateParam);
   const roomCalendarIds = buildRoomCalendarIds(roomCalendars);
   const bookingGroups = await Promise.all(
     roomCalendars.map(async ({ calendarId, room }) => {
@@ -221,10 +228,12 @@ export async function loadScheduleData(request: Request): Promise<LoaderData> {
   return {
     bookings,
     currentUserEmail: googleSession.googleUser.email,
+    date,
     headers: {
       "Set-Cookie": await commitSession(session),
     },
     isAuthenticated: true,
+    isToday: date === todayDate,
     roomCalendarIds,
     roomCount: roomCalendars.length,
   } satisfies LoaderData;
@@ -341,15 +350,11 @@ export async function mutateScheduleBooking(request: Request) {
     return buildActionError("End time must be later than start time.", defaultValues);
   }
 
-  const todayInAmsterdam = getAmsterdamDayBounds().date;
   const startDateLabel = startDateTime.toPlainDate().toString();
   const endDateLabel = endDateTime.toPlainDate().toString();
 
-  if (startDateLabel !== todayInAmsterdam || endDateLabel !== todayInAmsterdam) {
-    return buildActionError(
-      "This board only manages bookings for today in Amsterdam time.",
-      defaultValues,
-    );
+  if (startDateLabel !== endDateLabel) {
+    return buildActionError("Start and end time must be on the same day.", defaultValues);
   }
 
   try {

@@ -28,8 +28,12 @@ export function getCurrentTimeOffset(): number | null {
   return (h - startHour + m / 60) * HOUR_WIDTH;
 }
 
-export function formatScheduleDate() {
-  return getCurrentAmsterdamDateTime().toLocaleString("en-US", {
+export function formatScheduleDate(date?: string) {
+  const plainDate = date
+    ? Temporal.PlainDate.from(date)
+    : getCurrentAmsterdamDateTime().toPlainDate();
+
+  return plainDate.toLocaleString("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -41,7 +45,19 @@ export function formatBookingWindow(startHour: number, endHour: number) {
   return `${formatHour(startHour)} - ${formatHour(endHour)}`;
 }
 
-export function getAmsterdamDayBounds() {
+export function getAmsterdamDayBounds(dateParam?: string) {
+  if (dateParam) {
+    const plainDate = Temporal.PlainDate.from(dateParam);
+    const startOfDay = plainDate.toZonedDateTime(GOOGLE_CALENDAR_TIME_ZONE);
+    const endOfDay = startOfDay.withPlainTime("23:59:59");
+
+    return {
+      date: plainDate.toString(),
+      timeMax: endOfDay.toString({ timeZoneName: "never" }),
+      timeMin: startOfDay.toString({ timeZoneName: "never" }),
+    };
+  }
+
   const now = getCurrentAmsterdamDateTime();
 
   return {
@@ -70,8 +86,8 @@ export function formatDateTimeLocalInTimeZone(value: string, timeZone: string) {
     .toString({ smallestUnit: "minute" });
 }
 
-export function createDefaultBookingValues(roomId?: string) {
-  const { date } = getAmsterdamDayBounds();
+export function createDefaultBookingValues(roomId?: string, dateParam?: string) {
+  const { date } = getAmsterdamDayBounds(dateParam);
   const fallbackRoomId = ROOMS[0]?.id ?? "";
   const nowHour = getCurrentAmsterdamDateTime().hour;
   const minHour = HOURS[0];
@@ -86,6 +102,16 @@ export function createDefaultBookingValues(roomId?: string) {
     startLocal: `${date}T${String(startHour).padStart(2, "0")}:00`,
     title: "",
   } satisfies ModalValues;
+}
+
+export function getTodayAmsterdamDate() {
+  return getCurrentAmsterdamDateTime().toPlainDate().toString();
+}
+
+export function getAdjacentDate(date: string, direction: -1 | 1) {
+  const plainDate = Temporal.PlainDate.from(date);
+
+  return plainDate.add({ days: direction }).toString();
 }
 
 export function parseDateTimeLocal(value: FormDataEntryValue | null) {
