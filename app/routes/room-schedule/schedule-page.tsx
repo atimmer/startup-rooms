@@ -346,14 +346,6 @@ export function SchedulePage() {
     >
       <header className="flex items-center justify-between gap-2 border-b border-gray-200 px-3 py-2 md:px-6 md:py-4">
         <div className="flex min-w-0 items-center gap-2 md:gap-3">
-          <div className="min-w-0">
-            <h1 className="text-sm font-semibold tracking-tight text-gray-900 md:text-lg">
-              Room Schedule
-            </h1>
-            <p className="text-xs font-medium text-gray-500 md:text-sm">
-              {formatScheduleDate(displayedDate)}
-            </p>
-          </div>
           <div className="flex items-center gap-1">
             <Button
               variant="outline"
@@ -405,6 +397,14 @@ export function SchedulePage() {
                 Today
               </Button>
             ) : null}
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-sm font-semibold tracking-tight text-gray-900 md:text-lg">
+              Room Schedule
+            </h1>
+            <p className="text-xs font-medium text-gray-500 md:text-sm">
+              {formatScheduleDate(displayedDate)}
+            </p>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2 md:gap-3">
