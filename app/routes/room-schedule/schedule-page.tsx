@@ -532,9 +532,8 @@ export function SchedulePage() {
                     ? SKELETON_BLOCK_OFFSETS.map((offset, index) => (
                         <div
                           key={`${room.id}-skeleton-${String(index)}`}
-                          className="absolute top-1/2 -translate-y-1/2 animate-pulse rounded-lg border border-gray-200 bg-gray-100/90"
+                          className="absolute top-1.5 bottom-1.5 animate-pulse rounded-lg border border-gray-200 bg-gray-100/90"
                           style={{
-                            height: 34 + (index % 2) * 6,
                             left: totalWidth * offset,
                             width: totalWidth * SKELETON_BLOCK_WIDTHS[index],
                           }}
