@@ -5,6 +5,7 @@ import {
   Link,
   useActionData,
   useLoaderData,
+  useLocation,
   useNavigation,
   useRevalidator,
   useSearchParams,
@@ -19,17 +20,22 @@ import { ACCENT, HEADER_HEIGHT, HOUR_WIDTH, ROW_HEIGHT, getRoomColor } from "./s
 import {
   createDefaultBookingValues,
   formatScheduleDate,
+  getAdjacentDate,
   getCurrentTimeOffset,
+  getTodayAmsterdamDate,
 } from "./schedule-time";
 import type { ActionData, LoaderData, ModalState, ScheduleBooking } from "./schedule-types";
 
 type FormSubmitEvent = Parameters<NonNullable<ComponentProps<typeof Form>["onSubmit"]>>[0];
 const FOCUS_REFRESH_COOLDOWN_MS = 60_000;
+const SKELETON_BLOCK_OFFSETS = [0.08, 0.38, 0.68] as const;
+const SKELETON_BLOCK_WIDTHS = [0.18, 0.24, 0.16] as const;
 
 export function SchedulePage() {
-  const { bookings, currentUserEmail, isAuthenticated, roomCalendarIds, roomCount } =
+  const { bookings, currentUserEmail, date, isAuthenticated, roomCalendarIds, roomCount } =
     useLoaderData<LoaderData>();
   const actionData = useActionData<ActionData>();
+  const location = useLocation();
   const navigation = useNavigation();
   const revalidator = useRevalidator();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -156,6 +162,33 @@ export function SchedulePage() {
     }
   }
 
+  function navigateToDate(nextDate: string | null) {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("bookingId");
+    nextParams.delete("modal");
+    nextParams.delete("roomId");
+
+    if (nextDate) {
+      nextParams.set("date", nextDate);
+    } else {
+      nextParams.delete("date");
+    }
+
+    setSearchParams(nextParams);
+  }
+
+  function goToPreviousDay() {
+    navigateToDate(getAdjacentDate(displayedDate, -1));
+  }
+
+  function goToNextDay() {
+    navigateToDate(getAdjacentDate(displayedDate, 1));
+  }
+
+  function goToToday() {
+    navigateToDate(null);
+  }
+
   function openCreateModal(nextRoomId?: string) {
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete("bookingId");
@@ -218,7 +251,7 @@ export function SchedulePage() {
           values:
             defaultActionValues?.intent === "create"
               ? defaultActionValues
-              : createDefaultBookingValues(requestedRoomId),
+              : createDefaultBookingValues(requestedRoomId, date),
         }
       : modalKind === "edit" && selectedBooking
         ? {
@@ -264,6 +297,19 @@ export function SchedulePage() {
       sensitivity: "accent",
       usage: "search",
     }) === 0;
+  const todayDate = getTodayAmsterdamDate();
+  const pendingLocation =
+    navigation.state === "loading" && navigation.location.pathname === location.pathname
+      ? navigation.location
+      : null;
+  const pendingNavigationDate =
+    pendingLocation === null
+      ? null
+      : (new URLSearchParams(pendingLocation.search).get("date") ?? todayDate);
+  const isNavigatingToDifferentDate =
+    pendingNavigationDate !== null && pendingNavigationDate !== date;
+  const displayedDate = pendingNavigationDate ?? date;
+  const displayedIsToday = displayedDate === todayDate;
   const isRefreshingSchedule = revalidator.state === "loading";
 
   function handleFormSubmit(event: FormSubmitEvent) {
@@ -299,11 +345,67 @@ export function SchedulePage() {
       className="min-h-screen bg-white text-gray-900"
     >
       <header className="flex items-center justify-between gap-2 border-b border-gray-200 px-3 py-2 md:px-6 md:py-4">
-        <div className="min-w-0">
-          <h1 className="text-sm font-semibold tracking-tight text-gray-900 md:text-lg">
-            Room Schedule
-          </h1>
-          <p className="text-xs font-medium text-gray-500 md:text-sm">{formatScheduleDate()}</p>
+        <div className="flex min-w-0 items-center gap-2 md:gap-3">
+          <div className="min-w-0">
+            <h1 className="text-sm font-semibold tracking-tight text-gray-900 md:text-lg">
+              Room Schedule
+            </h1>
+            <p className="text-xs font-medium text-gray-500 md:text-sm">
+              {formatScheduleDate(displayedDate)}
+            </p>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={goToPreviousDay}
+              aria-label="Previous day"
+              className="h-7 w-7 p-0 md:h-8 md:w-8"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                className="h-4 w-4"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={goToNextDay}
+              aria-label="Next day"
+              className="h-7 w-7 p-0 md:h-8 md:w-8"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                className="h-4 w-4"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </Button>
+            {!displayedIsToday ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={goToToday}
+                className="ml-1 h-7 px-2 text-xs md:h-8 md:px-3 md:text-sm"
+              >
+                Today
+              </Button>
+            ) : null}
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-2 md:gap-3">
           {isRefreshingSchedule ? (
@@ -327,14 +429,16 @@ export function SchedulePage() {
               >
                 New booking
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={scrollToNow}
-                className="md:px-3 md:py-1.5 md:text-sm"
-              >
-                Now
-              </Button>
+              {displayedIsToday && !isNavigatingToDifferentDate ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={scrollToNow}
+                  className="md:px-3 md:py-1.5 md:text-sm"
+                >
+                  Now
+                </Button>
+              ) : null}
             </div>
           ) : (
             <Button
@@ -405,7 +509,9 @@ export function SchedulePage() {
             </div>
 
             {ROOMS.map((room) => {
-              const roomBookings = bookingsByRoom.get(room.id) ?? [];
+              const roomBookings = isNavigatingToDifferentDate
+                ? []
+                : (bookingsByRoom.get(room.id) ?? []);
               const color = getRoomColor(room.id);
 
               return (
@@ -422,45 +528,67 @@ export function SchedulePage() {
                     />
                   ))}
 
-                  {roomBookings.map((booking) => {
-                    const left = (booking.startHour - HOURS[0]) * HOUR_WIDTH;
-                    const width = Math.max((booking.endHour - booking.startHour) * HOUR_WIDTH, 24);
-
-                    return (
-                      <button
-                        key={booking.id}
-                        type="button"
-                        className="absolute top-1.5 bottom-1.5 flex cursor-pointer items-center overflow-hidden rounded-lg px-3 text-left transition-shadow hover:shadow-md"
-                        style={{
-                          backgroundColor: color.bg,
-                          borderLeft: `3px solid ${color.border}`,
-                          left,
-                          width,
-                        }}
-                        aria-label={`Edit booking ${booking.title} in ${room.name}`}
-                        onClick={() => {
-                          openEditModal(booking.id);
-                        }}
-                      >
-                        <div className="min-w-0">
-                          <p
-                            className="truncate text-sm font-semibold leading-tight"
-                            style={{ color: color.text }}
-                          >
-                            {booking.title}
-                          </p>
-                          <p
-                            className="truncate text-xs"
-                            style={{ color: color.text, opacity: 0.7 }}
-                          >
-                            {ROOMS.find((r) => r.id === booking.roomId)?.name}
-                          </p>
+                  {isNavigatingToDifferentDate
+                    ? SKELETON_BLOCK_OFFSETS.map((offset, index) => (
+                        <div
+                          key={`${room.id}-skeleton-${String(index)}`}
+                          className="absolute top-1/2 -translate-y-1/2 animate-pulse rounded-lg border border-gray-200 bg-gray-100/90"
+                          style={{
+                            height: 34 + (index % 2) * 6,
+                            left: totalWidth * offset,
+                            width: totalWidth * SKELETON_BLOCK_WIDTHS[index],
+                          }}
+                        >
+                          <div className="px-3 py-2">
+                            <div className="h-2.5 w-20 rounded-full bg-gray-200" />
+                            <div className="mt-2 h-2 w-14 rounded-full bg-gray-200/80" />
+                          </div>
                         </div>
-                      </button>
-                    );
-                  })}
+                      ))
+                    : roomBookings.map((booking) => {
+                        const left = (booking.startHour - HOURS[0]) * HOUR_WIDTH;
+                        const width = Math.max(
+                          (booking.endHour - booking.startHour) * HOUR_WIDTH,
+                          24,
+                        );
 
-                  {isAuthenticated && typeof roomCalendarIds[room.id] === "string" ? (
+                        return (
+                          <button
+                            key={booking.id}
+                            type="button"
+                            className="absolute top-1.5 bottom-1.5 flex cursor-pointer items-center overflow-hidden rounded-lg px-3 text-left transition-shadow hover:shadow-md"
+                            style={{
+                              backgroundColor: color.bg,
+                              borderLeft: `3px solid ${color.border}`,
+                              left,
+                              width,
+                            }}
+                            aria-label={`Edit booking ${booking.title} in ${room.name}`}
+                            onClick={() => {
+                              openEditModal(booking.id);
+                            }}
+                          >
+                            <div className="min-w-0">
+                              <p
+                                className="truncate text-sm font-semibold leading-tight"
+                                style={{ color: color.text }}
+                              >
+                                {booking.title}
+                              </p>
+                              <p
+                                className="truncate text-xs"
+                                style={{ color: color.text, opacity: 0.7 }}
+                              >
+                                {ROOMS.find((r) => r.id === booking.roomId)?.name}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
+
+                  {isAuthenticated &&
+                  !isNavigatingToDifferentDate &&
+                  typeof roomCalendarIds[room.id] === "string" ? (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -476,7 +604,7 @@ export function SchedulePage() {
               );
             })}
 
-            {now !== null ? (
+            {displayedIsToday && !isNavigatingToDifferentDate && now !== null ? (
               <div
                 className="pointer-events-none absolute"
                 style={{
@@ -512,12 +640,15 @@ export function SchedulePage() {
               </div>
             ) : null}
 
-            {isAuthenticated && bookings.length === 0 ? (
+            {isAuthenticated && !isNavigatingToDifferentDate && bookings.length === 0 ? (
               <div className="absolute inset-0 flex items-center justify-center bg-white/60">
                 <div className="rounded-xl border border-gray-200 bg-white px-6 py-5 text-center shadow-sm">
-                  <p className="text-base font-semibold text-gray-900">No bookings today</p>
+                  <p className="text-base font-semibold text-gray-900">
+                    No bookings {displayedIsToday ? "today" : "on this day"}
+                  </p>
                   <p className="mt-2 text-sm text-gray-500">
-                    Checked {String(roomCount)} room calendars for today in Amsterdam time.
+                    Checked {String(roomCount)} room calendars
+                    {displayedIsToday ? " for today" : ""} in Amsterdam time.
                   </p>
                 </div>
               </div>
