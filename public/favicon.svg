@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Nijmegen Startup Rooms favicon">
+  <defs>
+    <linearGradient id="bg" x1="160" y1="96" x2="864" y2="928" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" />
+      <stop offset="1" stop-color="#f8f4ec" />
+    </linearGradient>
+    <linearGradient id="purple" x1="248" y1="184" x2="780" y2="824" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#9c6bff" />
+      <stop offset="1" stop-color="#8259df" />
+    </linearGradient>
+    <linearGradient id="orange" x1="360" y1="394" x2="644" y2="692" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff4e61" />
+      <stop offset="1" stop-color="#ff6538" />
+    </linearGradient>
+    <filter id="glow" x="-12%" y="-12%" width="124%" height="124%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#8f63ee" flood-opacity="0.18" />
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)" />
+  <g filter="url(#glow)">
+    <g fill="none" stroke="url(#purple)" stroke-linecap="round" stroke-linejoin="round" stroke-width="38">
+      <path d="M224 376 H800" />
+      <path d="M224 376 C286 226 394 152 512 152 C630 152 738 226 800 376" />
+      <path d="M248 376 V800 H210" />
+      <path d="M776 376 V800 H814" />
+      <path d="M334 414 V800 H312" />
+      <path d="M690 414 V800 H712" />
+      <path d="M334 376 V760 H690" />
+      <path d="M512 376 V720" />
+      <path d="M334 550 H690" />
+      <path d="M334 760 H690" />
+    </g>
+    <g fill="#ffffff">
+      <rect x="306" y="280" width="40" height="96" rx="6" />
+      <rect x="381" y="232" width="40" height="144" rx="6" />
+      <rect x="457" y="214" width="40" height="162" rx="6" />
+      <rect x="533" y="214" width="40" height="162" rx="6" />
+      <rect x="609" y="232" width="40" height="144" rx="6" />
+      <rect x="684" y="280" width="40" height="96" rx="6" />
+      <rect x="345" y="382" width="146" height="146" rx="8" />
+      <rect x="533" y="570" width="146" height="146" rx="8" />
+    </g>
+    <g fill="url(#orange)">
+      <rect x="533" y="382" width="146" height="146" rx="8" />
+      <rect x="345" y="570" width="146" height="146" rx="8" />
+    </g>
+  </g>
+</svg>
