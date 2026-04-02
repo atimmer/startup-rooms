@@ -342,7 +342,7 @@ export function SchedulePage() {
   return (
     <div
       style={{ fontFamily: "'Source Sans 3', sans-serif" }}
-      className="min-h-screen bg-white text-gray-900"
+      className="flex min-h-screen flex-col bg-white text-gray-900"
     >
       <header className="flex items-center justify-between gap-2 border-b border-gray-200 px-3 py-2 md:px-6 md:py-4">
         <div className="flex min-w-0 items-center gap-2 md:gap-3">
@@ -453,7 +453,7 @@ export function SchedulePage() {
         </div>
       </header>
 
-      <div className="flex" style={{ height: "calc(100vh - 53px)" }}>
+      <div className="flex min-h-0 flex-1">
         <div className="w-11 shrink-0 border-r border-gray-200 md:w-[200px]">
           <div className="border-b border-gray-200" style={{ height: HEADER_HEIGHT }} />
           {ROOMS.map((room) => {
@@ -655,6 +655,20 @@ export function SchedulePage() {
           </div>
         </div>
       </div>
+
+      <footer className="border-t border-gray-200 px-4 py-3 text-xs text-gray-500 md:px-6">
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <p>Gebruik op eigen risico. Data loopt via Google Calendar.</p>
+          <div className="flex items-center gap-4">
+            <Link className="transition hover:text-gray-900" to="/privacy">
+              Privacybeleid
+            </Link>
+            <Link className="transition hover:text-gray-900" to="/voorwaarden">
+              Algemene voorwaarden
+            </Link>
+          </div>
+        </div>
+      </footer>
 
       <Dialog
         open={modalState !== null}
