@@ -1,101 +1,134 @@
-# Welcome to React Router!
+# Nijmegen Startup Rooms
 
-A modern, production-ready template for building full-stack React applications using React Router.
+Internal room-booking board for the Nijmegen Startup community. The app shows a day view for the shared meeting rooms, reads live availability from Google Calendar, and lets signed-in users create, update, or delete bookings directly against the underlying room calendars.
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/react-router-templates/tree/main/default)
+Built with React Router 7, React 19, TypeScript, Vite, Tailwind CSS v4, and Google Calendar OAuth.
 
-## Features
+## What it does
 
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
+- Shows a room schedule board for the configured startup rooms.
+- Uses Google OAuth to connect a user account.
+- Reads room events from the Google calendars the signed-in user can access.
+- Creates and updates bookings directly in those calendars.
+- Uses Europe/Amsterdam time for date boundaries and display logic.
+- Supports day navigation, mobile horizontal scrolling, and lightweight client-side schedule caching.
 
-## Getting Started
+## Room model
 
-### Installation
+The rooms are defined in [`app/data/rooms.ts`](/Users/anton/Code/nijmegen-startup-rooms/app/data/rooms.ts). Each room includes:
 
-Install the dependencies:
+- a stable internal `id`
+- the visible room name
+- the expected Google Calendar summary
+- a capacity label
+- a color used in the schedule UI
 
-```bash
-npm install
-```
+When a user signs in, the app loads that user's Google Calendar list and matches calendars to rooms by summary. The matching logic is in [`app/routes/room-schedule/schedule-server.ts`](/Users/anton/Code/nijmegen-startup-rooms/app/routes/room-schedule/schedule-server.ts).
 
-### Development
+## Requirements
 
-Start the development server with HMR:
+- Node.js 20+
+- `pnpm`
+- A Google Cloud project with OAuth credentials
+- A Google account that has access to the room calendars
 
-```bash
-npm run dev
-```
-
-Your application will be available at `http://localhost:5173`.
-
-## Building for Production
-
-Create a production build:
+Enable `corepack` once if needed:
 
 ```bash
-npm run build
+corepack enable
 ```
 
-## Deployment
+## Environment variables
 
-### Docker Deployment
-
-To build and run using Docker:
+Copy `.env.example` to `.env` and fill in the values:
 
 ```bash
-docker build -t my-app .
-
-# Run the container
-docker run -p 3000:3000 my-app
+cp .env.example .env
 ```
 
-The containerized application can be deployed to any platform that supports Docker, including:
-
-- AWS ECS
-- Google Cloud Run
-- Azure Container Apps
-- Digital Ocean App Platform
-- Fly.io
-- Railway
-
-### DIY Deployment
-
-If you're familiar with deploying Node applications, the built-in app server is production-ready.
-
-Make sure to deploy the output of `npm run build`
-
-```
-├── package.json
-├── package-lock.json (or pnpm-lock.yaml, or bun.lockb)
-├── build/
-│   ├── client/    # Static assets
-│   └── server/    # Server-side code
-```
-
-## Styling
-
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
-
----
-
-Built with ❤️ using React Router.
-
-## Google Calendar OAuth
-
-Create a local `.env` file with:
-
-```bash
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
+```env
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
 GOOGLE_REDIRECT_URI=http://localhost:5173/auth/google/callback
-SESSION_SECRET=replace-with-a-long-random-string
-GOOGLE_ROOM_CALENDAR_ID=room-calendar@example.com
+SESSION_SECRET=
+GOOGLE_ROOM_CALENDAR_ID=
 ```
 
-Then run `pnpm dev` and open `/`.
+Notes:
+
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REDIRECT_URI` are required for Google OAuth.
+- `SESSION_SECRET` is required and should be a long random string.
+- `GOOGLE_ROOM_CALENDAR_ID` exists in the example file but is not currently used by the app.
+
+## Google setup
+
+1. Create a Google Cloud project.
+2. Enable the Google Calendar API.
+3. Create an OAuth client for a web application.
+4. Add `http://localhost:5173/auth/google/callback` as an authorized redirect URI for local development.
+5. Make sure the Google account you sign in with can read and write the room calendars.
+6. Make sure the room calendar names match the expected summaries in [`app/data/rooms.ts`](/Users/anton/Code/nijmegen-startup-rooms/app/data/rooms.ts).
+
+The app requests these scopes:
+
+- `openid`
+- `email`
+- `profile`
+- `https://www.googleapis.com/auth/calendar.events`
+- `https://www.googleapis.com/auth/calendar.calendarlist.readonly`
+
+## Local development
+
+Install dependencies:
+
+```bash
+pnpm install
+```
+
+Start the dev server:
+
+```bash
+pnpm dev
+```
+
+The app runs at `http://localhost:5173`.
+
+Open the root route and connect Google to load live room data.
+
+## Scripts
+
+- `pnpm dev` starts the local dev server.
+- `pnpm build` creates the production build.
+- `pnpm start` serves the built app.
+- `pnpm test` runs the Vitest suite.
+- `pnpm typecheck` generates route types and runs TypeScript.
+- `pnpm lint` runs ESLint.
+- `pnpm format` formats the repo with `oxfmt`.
+- `pnpm presubmit` runs tests, typecheck, lint, and format checks.
+
+## Important behavior
+
+- The schedule is server-rendered and uses React Router data loaders/actions.
+- The visible schedule is date-based and uses Amsterdam timezone rules, including DST handling.
+- If Google refresh tokens become invalid, the app clears the session and sends the user through OAuth again.
+- Schedule writes go straight to Google Calendar. There is no local booking database.
+
+## Project structure
+
+- [`app/routes/room-schedule.tsx`](/Users/anton/Code/nijmegen-startup-rooms/app/routes/room-schedule.tsx): route module for the main board
+- [`app/routes/room-schedule/schedule-page.tsx`](/Users/anton/Code/nijmegen-startup-rooms/app/routes/room-schedule/schedule-page.tsx): UI for the schedule board and booking dialog
+- [`app/routes/room-schedule/schedule-server.ts`](/Users/anton/Code/nijmegen-startup-rooms/app/routes/room-schedule/schedule-server.ts): Google Calendar loading and booking mutations
+- [`app/routes/room-schedule/schedule-time.ts`](/Users/anton/Code/nijmegen-startup-rooms/app/routes/room-schedule/schedule-time.ts): Amsterdam date/time helpers
+- [`app/lib/google.server.ts`](/Users/anton/Code/nijmegen-startup-rooms/app/lib/google.server.ts): OAuth and authorized Google API client setup
+- [`app/lib/session.server.ts`](/Users/anton/Code/nijmegen-startup-rooms/app/lib/session.server.ts): cookie-backed session storage
+
+## Production
+
+Build and serve the app with:
+
+```bash
+pnpm build
+pnpm start
+```
+
+The repo includes Vercel React Router configuration in [`react-router.config.ts`](/Users/anton/Code/nijmegen-startup-rooms/react-router.config.ts), so Vercel is the most obvious deployment target. Any deployment that can run the built server output with the required environment variables should also work.
