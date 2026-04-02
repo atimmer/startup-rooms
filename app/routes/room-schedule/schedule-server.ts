@@ -142,7 +142,19 @@ function buildActionError(error: string, defaultValues: ModalValues) {
   } satisfies ActionData;
 }
 
-export async function loadScheduleData(request: Request): Promise<LoaderData> {
+async function destroySessionAndReauthenticate(
+  session: Awaited<ReturnType<typeof import("../../lib/session.server").getSession>>,
+) {
+  const { destroySession } = await import("../../lib/session.server");
+
+  return redirect("/auth/google", {
+    headers: {
+      "Set-Cookie": await destroySession(session),
+    },
+  });
+}
+
+export async function loadScheduleData(request: Request): Promise<LoaderData | Response> {
   const { commitSession, getSession, readGoogleSession } = await import("../../lib/session.server");
   const session = await getSession(request);
   const googleSession = readGoogleSession(session);
@@ -166,9 +178,24 @@ export async function loadScheduleData(request: Request): Promise<LoaderData> {
     } satisfies LoaderData;
   }
 
-  const { calendar, refreshedTokens, roomCalendars } = await loadRoomCalendars(
-    googleSession.googleTokens,
-  );
+  let calendar: Awaited<ReturnType<typeof loadRoomCalendars>>["calendar"];
+  let refreshedTokens: Awaited<ReturnType<typeof loadRoomCalendars>>["refreshedTokens"];
+  let roomCalendars: Awaited<ReturnType<typeof loadRoomCalendars>>["roomCalendars"];
+
+  try {
+    ({ calendar, refreshedTokens, roomCalendars } = await loadRoomCalendars(
+      googleSession.googleTokens,
+    ));
+  } catch (error) {
+    const { isGoogleAuthInvalidGrantError } = await import("../../lib/google.server");
+
+    if (isGoogleAuthInvalidGrantError(error)) {
+      return destroySessionAndReauthenticate(session);
+    }
+
+    throw error;
+  }
+
   const { date, timeMax, timeMin } = getAmsterdamDayBounds(dateParam);
   const roomCalendarIds = buildRoomCalendarIds(roomCalendars);
   const bookingGroups = await Promise.all(
@@ -324,6 +351,12 @@ export async function mutateScheduleBooking(request: Request) {
         },
       });
     } catch (error) {
+      const { isGoogleAuthInvalidGrantError } = await import("../../lib/google.server");
+
+      if (isGoogleAuthInvalidGrantError(error)) {
+        return destroySessionAndReauthenticate(session);
+      }
+
       const message =
         error instanceof Error ? error.message : "Google Calendar rejected the booking change.";
 
@@ -424,6 +457,12 @@ export async function mutateScheduleBooking(request: Request) {
       },
     });
   } catch (error) {
+    const { isGoogleAuthInvalidGrantError } = await import("../../lib/google.server");
+
+    if (isGoogleAuthInvalidGrantError(error)) {
+      return destroySessionAndReauthenticate(session);
+    }
+
     const message =
       error instanceof Error ? error.message : "Google Calendar rejected the booking change.";
 

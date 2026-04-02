@@ -19,6 +19,20 @@ interface StoredGoogleTokens {
   tokenType?: string;
 }
 
+function isUnknownRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object";
+}
+
+function readStringProperty(value: unknown, key: string) {
+  if (!isUnknownRecord(value) || !(key in value)) {
+    return undefined;
+  }
+
+  const property = value[key];
+
+  return typeof property === "string" ? property : undefined;
+}
+
 function createOAuthClient() {
   return new OAuth2Client({
     clientId: env.googleClientId,
@@ -102,4 +116,22 @@ export async function createAuthorizedCalendarClient(tokens: StoredGoogleTokens)
       tokenType: client.credentials.token_type ?? tokens.tokenType,
     },
   };
+}
+
+export function isGoogleAuthInvalidGrantError(error: unknown) {
+  if (error instanceof Error && error.message.includes("invalid_grant")) {
+    return true;
+  }
+
+  if (!error || typeof error !== "object" || !("response" in error)) {
+    return false;
+  }
+
+  const response = error.response;
+
+  if (!response || typeof response !== "object" || !("data" in response)) {
+    return false;
+  }
+
+  return readStringProperty(response.data, "error") === "invalid_grant";
 }

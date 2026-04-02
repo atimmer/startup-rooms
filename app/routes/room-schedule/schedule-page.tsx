@@ -31,28 +31,6 @@ type FormSubmitEvent = Parameters<NonNullable<ComponentProps<typeof Form>["onSub
 const FOCUS_REFRESH_COOLDOWN_MS = 60_000;
 const SKELETON_BLOCK_OFFSETS = [0.08, 0.38, 0.68] as const;
 const SKELETON_BLOCK_WIDTHS = [0.18, 0.24, 0.16] as const;
-const LOGGED_OUT_FEATURES = [
-  {
-    description:
-      "Browse the live room board before signing in so the product stays understandable.",
-    title: "See availability across all rooms",
-  },
-  {
-    description:
-      "Create, update, and delete bookings directly in the shared Startup Nijmegen calendars.",
-    title: "Manage bookings in one place",
-  },
-  {
-    description:
-      "Google access is only requested to identify you and perform the calendar actions you ask for.",
-    title: "Use Google only for authentication and calendar access",
-  },
-] as const;
-const LOGGED_OUT_POLICY_POINTS = [
-  "Startup Rooms requests Google profile details so the app can identify the signed-in organiser.",
-  "Google Calendar access is used to read room availability and create, edit, or remove bookings on your behalf.",
-  "The homepage remains visible before login and links directly to the privacy policy and terms.",
-] as const;
 
 function ConnectGoogleButton({
   className,
@@ -80,153 +58,35 @@ function ConnectGoogleButton({
   );
 }
 
-function LoggedOutScheduleOverlay({ roomCount }: { roomCount: number }) {
+function LoggedOutScheduleOverlay() {
   return (
-    <div className="absolute inset-0 z-30 bg-stone-950/30 backdrop-blur-[2px]">
-      <div className="flex min-h-full items-stretch justify-center md:items-center md:p-6">
-        <section className="flex min-h-full w-full max-w-4xl flex-col overflow-hidden border-x border-stone-200 bg-white shadow-2xl md:min-h-0 md:rounded-[2rem] md:border">
-          <div className="flex flex-col gap-5 border-b border-stone-200 bg-gradient-to-br from-stone-50 via-white to-amber-50 px-5 py-5 md:px-8 md:py-7">
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <ConnectGoogleButton className="w-full md:w-auto" />
+    <div className="absolute inset-0 z-30 flex items-center justify-center bg-gradient-to-b from-stone-950/20 via-stone-950/50 to-stone-950/80 backdrop-blur-[3px]">
+      <div className="mx-4 w-full max-w-md text-center">
+        <img
+          alt="Startup Rooms"
+          className="mx-auto mb-6 h-16 w-16 drop-shadow-lg"
+          src="/logo.png"
+        />
 
-              <div className="space-y-3 md:max-w-2xl">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    {ROOMS.slice(0, 4).map((room) => (
-                      <span
-                        key={room.id}
-                        className="h-3 w-3 rounded-full ring-4 ring-white"
-                        style={{ backgroundColor: room.color }}
-                      />
-                    ))}
-                  </div>
-                  <span className="rounded-full border border-stone-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase text-stone-500">
-                    Startup Rooms
-                  </span>
-                </div>
+        <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+          Startup Rooms
+        </h2>
+        <p className="mt-3 text-base leading-relaxed text-stone-300">
+          Book meeting rooms at Startup Nijmegen. Sign in with Google to view availability and manage reservations.
+        </p>
 
-                <div className="space-y-2">
-                  <h2 className="max-w-xl text-3xl font-semibold tracking-tight text-stone-950 md:text-4xl">
-                    Shared room bookings for Startup Nijmegen, visible before sign-in.
-                  </h2>
-                  <p className="max-w-2xl text-sm leading-6 text-stone-600 md:text-base">
-                    This homepage explains what the app does before login: it shows live
-                    availability for {String(roomCount)} meeting rooms and lets authorised users
-                    manage bookings in Google Calendar.
-                  </p>
-                </div>
-              </div>
-            </div>
+        <div className="mt-8">
+          <ConnectGoogleButton className="w-full sm:w-auto" label="Sign in with Google" />
+        </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {ROOMS.map((room) => (
-                <div
-                  key={room.id}
-                  className="rounded-2xl border border-stone-200 bg-white/90 px-4 py-3 shadow-sm"
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="h-3 w-3 rounded-full"
-                      style={{ backgroundColor: room.color }}
-                    />
-                    <div>
-                      <p className="text-sm font-semibold text-stone-950">{room.name}</p>
-                      <p className="text-xs text-stone-500">{room.capacityLabel}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid flex-1 gap-6 px-5 py-6 md:grid-cols-[1.2fr_0.8fr] md:px-8 md:py-8">
-            <div className="space-y-5">
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">
-                  What the app does
-                </p>
-                <div className="space-y-3">
-                  {LOGGED_OUT_FEATURES.map((item) => (
-                    <article
-                      key={item.title}
-                      className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-4"
-                    >
-                      <h3 className="text-base font-semibold text-stone-950">{item.title}</h3>
-                      <p className="mt-1 text-sm leading-6 text-stone-600">{item.description}</p>
-                    </article>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-stone-200 bg-white px-4 py-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">
-                  Before you connect Google
-                </p>
-                <p className="mt-2 text-sm leading-6 text-stone-600">
-                  You can inspect the interface without logging in. Connecting Google only unlocks
-                  reading room calendars and writing the booking changes you explicitly make.
-                </p>
-              </div>
-            </div>
-
-            <aside className="flex flex-col justify-between gap-5 rounded-[1.75rem] border border-stone-200 bg-stone-950 px-5 py-5 text-stone-50 shadow-xl">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-stone-300">
-                    Why Google data is requested
-                  </p>
-                  <p className="text-sm leading-6 text-stone-200">
-                    The app uses Google only for authentication and shared calendar operations. It
-                    does not require a separate local account before you can understand what the
-                    product is for.
-                  </p>
-                </div>
-
-                <div className="space-y-3">
-                  {LOGGED_OUT_POLICY_POINTS.map((point) => (
-                    <div key={point} className="flex gap-3">
-                      <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-amber-300" />
-                      <p className="text-sm leading-6 text-stone-200">{point}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="rounded-2xl bg-white/10 px-4 py-4">
-                  <p className="text-sm font-semibold text-white">Need the policy details first?</p>
-                  <p className="mt-2 text-sm leading-6 text-stone-200">
-                    Read the privacy policy and terms before connecting Google. Both stay available
-                    without sign-in.
-                  </p>
-                  <div className="mt-4 flex flex-wrap gap-3">
-                    <Link
-                      className="text-sm font-semibold text-white underline decoration-stone-400 underline-offset-4 transition hover:text-amber-200"
-                      to="/privacy"
-                    >
-                      Privacybeleid
-                    </Link>
-                    <Link
-                      className="text-sm font-semibold text-white underline decoration-stone-400 underline-offset-4 transition hover:text-amber-200"
-                      to="/voorwaarden"
-                    >
-                      Algemene voorwaarden
-                    </Link>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3 border-t border-white/10 pt-5">
-                <p className="text-sm leading-6 text-stone-200">
-                  Connect Google when you want to view live bookings and manage room reservations.
-                </p>
-                <ConnectGoogleButton
-                  className="w-full"
-                  label="Connect Google Calendar"
-                  tone="light"
-                />
-              </div>
-            </aside>
-          </div>
-        </section>
+        <div className="mt-6 flex justify-center gap-4 text-sm text-stone-400">
+          <Link className="underline underline-offset-4 transition hover:text-stone-200" to="/privacy">
+            Privacybeleid
+          </Link>
+          <Link className="underline underline-offset-4 transition hover:text-stone-200" to="/voorwaarden">
+            Voorwaarden
+          </Link>
+        </div>
       </div>
     </div>
   );
@@ -843,7 +703,7 @@ export function SchedulePage() {
           </div>
         </div>
 
-        {!isAuthenticated ? <LoggedOutScheduleOverlay roomCount={roomCount} /> : null}
+        {!isAuthenticated ? <LoggedOutScheduleOverlay /> : null}
       </div>
 
       <footer className="border-t border-gray-200 px-4 py-3 text-xs text-gray-500 md:px-6">
