@@ -3,8 +3,6 @@ import { google } from "googleapis";
 
 import { env } from "./env.server";
 
-const GOOGLE_CALLBACK_PATH = "/auth/google/callback";
-
 const googleScopes = [
   "openid",
   "email",
@@ -35,59 +33,16 @@ function readStringProperty(value: unknown, key: string) {
   return typeof property === "string" ? property : undefined;
 }
 
-function readForwardedHeaderValue(headers: Headers, name: string) {
-  const value = headers.get(name);
-
-  if (!value) {
-    return undefined;
-  }
-
-  const firstValue = value.split(",")[0]?.trim();
-
-  return firstValue || undefined;
-}
-
-export function getGoogleRedirectUri(request: Request) {
-  const redirectUrl = new URL(request.url);
-  const forwardedHost = readForwardedHeaderValue(request.headers, "x-forwarded-host");
-  const forwardedProto = readForwardedHeaderValue(request.headers, "x-forwarded-proto");
-
-  if (forwardedHost) {
-    const forwardedOriginUrl = new URL(`https://${forwardedHost}`);
-
-    redirectUrl.hostname = forwardedOriginUrl.hostname;
-    redirectUrl.port = forwardedOriginUrl.port;
-  }
-
-  if (forwardedProto) {
-    redirectUrl.protocol = `${forwardedProto}:`;
-  }
-
-  redirectUrl.pathname = GOOGLE_CALLBACK_PATH;
-  redirectUrl.search = "";
-  redirectUrl.hash = "";
-
-  if (redirectUrl.origin !== "null") {
-    return redirectUrl.toString();
-  }
-
-  if (env.googleRedirectUri) {
-    return env.googleRedirectUri;
-  }
-
-  throw new Error("Unable to determine Google redirect URI from the incoming request.");
-}
-
-function createOAuthClient(redirectUri?: string) {
+function createOAuthClient() {
   return new OAuth2Client({
     clientId: env.googleClientId,
     clientSecret: env.googleClientSecret,
-    redirectUri: redirectUri ?? env.googleRedirectUri,
+    redirectUri: env.googleRedirectUri,
   });
 }
 
-export function getGoogleAuthUrl(state: string, redirectUri: string) {
-  const client = createOAuthClient(redirectUri);
+export function getGoogleAuthUrl(state: string) {
+  const client = createOAuthClient();
 
   return client.generateAuthUrl({
     access_type: "offline",
@@ -98,8 +53,8 @@ export function getGoogleAuthUrl(state: string, redirectUri: string) {
   });
 }
 
-export async function exchangeCodeForTokens(code: string, redirectUri: string) {
-  const client = createOAuthClient(redirectUri);
+export async function exchangeCodeForTokens(code: string) {
+  const client = createOAuthClient();
   const response = await client.getToken(code);
 
   if (!response.tokens.access_token) {

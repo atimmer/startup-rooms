@@ -4,7 +4,7 @@ import type { Route } from "./+types/auth.google.callback";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const [
-    { exchangeCodeForTokens, getGoogleRedirectUri },
+    { exchangeCodeForTokens },
     { commitSession, getSession, readGoogleSession, readOAuthState },
   ] = await Promise.all([import("../lib/google.server"), import("../lib/session.server")]);
   const requestUrl = new URL(request.url);
@@ -29,7 +29,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     return new Response("OAuth state mismatch.", { status: 400 });
   }
 
-  const result = await exchangeCodeForTokens(code, getGoogleRedirectUri(request));
+  const result = await exchangeCodeForTokens(code);
   const refreshToken =
     result.tokens.refreshToken ?? existingGoogleSession?.googleTokens.refreshToken;
 
