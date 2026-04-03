@@ -49,6 +49,7 @@ cp .env.example .env
 ```env
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
+# Optional fallback when the incoming request origin is unavailable.
 GOOGLE_REDIRECT_URI=http://localhost:5173/auth/google/callback
 SESSION_SECRET=
 GOOGLE_ROOM_CALENDAR_ID=
@@ -56,7 +57,8 @@ GOOGLE_ROOM_CALENDAR_ID=
 
 Notes:
 
-- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REDIRECT_URI` are required for Google OAuth.
+- `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are required for Google OAuth.
+- `GOOGLE_REDIRECT_URI` is an optional fallback for environments where the app cannot infer its public origin from the incoming request.
 - `SESSION_SECRET` is required and should be a long random string.
 - `GOOGLE_ROOM_CALENDAR_ID` exists in the example file but is not currently used by the app.
 
@@ -66,8 +68,9 @@ Notes:
 2. Enable the Google Calendar API.
 3. Create an OAuth client for a web application.
 4. Add `http://localhost:5173/auth/google/callback` as an authorized redirect URI for local development.
-5. Make sure the Google account you sign in with can read and write the room calendars.
-6. Make sure the room calendar names match the expected summaries in [`app/data/rooms.ts`](/Users/anton/Code/nijmegen-startup-rooms/app/data/rooms.ts).
+5. Add `https://startup-rooms.24letters.com/auth/google/callback` as an authorized redirect URI for production.
+6. Make sure the Google account you sign in with can read and write the room calendars.
+7. Make sure the room calendar names match the expected summaries in [`app/data/rooms.ts`](/Users/anton/Code/nijmegen-startup-rooms/app/data/rooms.ts).
 
 The app requests these scopes:
 
