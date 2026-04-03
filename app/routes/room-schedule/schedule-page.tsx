@@ -72,7 +72,8 @@ function LoggedOutScheduleOverlay() {
           Startup Rooms
         </h2>
         <p className="mt-3 text-base leading-relaxed text-stone-300">
-          Book meeting rooms at Startup Nijmegen. Sign in with Google to view availability and manage reservations.
+          Book meeting rooms at Startup Nijmegen. Sign in with Google to view availability and
+          manage reservations.
         </p>
 
         <div className="mt-8">
@@ -80,10 +81,16 @@ function LoggedOutScheduleOverlay() {
         </div>
 
         <div className="mt-6 flex justify-center gap-4 text-sm text-stone-400">
-          <Link className="underline underline-offset-4 transition hover:text-stone-200" to="/privacy">
+          <Link
+            className="underline underline-offset-4 transition hover:text-stone-200"
+            to="/privacy"
+          >
             Privacybeleid
           </Link>
-          <Link className="underline underline-offset-4 transition hover:text-stone-200" to="/voorwaarden">
+          <Link
+            className="underline underline-offset-4 transition hover:text-stone-200"
+            to="/voorwaarden"
+          >
             Voorwaarden
           </Link>
         </div>
@@ -716,6 +723,14 @@ export function SchedulePage() {
             <Link className="transition hover:text-gray-900" to="/voorwaarden">
               Algemene voorwaarden
             </Link>
+            <a
+              className="transition hover:text-gray-900"
+              href="https://github.com/atimmer/startup-rooms"
+              rel="noreferrer"
+              target="_blank"
+            >
+              GitHub
+            </a>
           </div>
         </div>
       </footer>
