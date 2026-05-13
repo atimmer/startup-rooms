@@ -122,6 +122,7 @@ export function SchedulePage() {
   const isPullRefreshPendingRef = useRef(false);
   const [tooltipRoomId, setTooltipRoomId] = useState<string | null>(null);
   const [pullDistance, setPullDistance] = useState(0);
+  const [isPullActive, setIsPullActive] = useState(false);
 
   const refetchSchedule = useEffectEvent(() => {
     if (!isAuthenticated) {
@@ -309,6 +310,7 @@ export function SchedulePage() {
       isPullingRef.current = true;
       pullDistanceRef.current = nextDistance;
       setPullDistance(nextDistance);
+      setIsPullActive(true);
     }
 
     function handleTouchEnd() {
@@ -319,6 +321,7 @@ export function SchedulePage() {
 
       const shouldRefresh = pullDistanceRef.current >= PULL_REFRESH_THRESHOLD;
       resetPullState();
+      setIsPullActive(false);
 
       if (shouldRefresh && refreshScheduleFromPull()) {
         setPullDistance(PULL_REFRESH_TRIGGER_DISTANCE);
@@ -546,357 +549,357 @@ export function SchedulePage() {
   return (
     <div
       style={{ fontFamily: "'Source Sans 3', sans-serif" }}
-      className="flex min-h-screen flex-col overscroll-y-contain bg-white text-gray-900"
+      className="relative flex min-h-screen flex-col overflow-hidden overscroll-y-contain bg-white text-gray-900"
     >
       <div
-        aria-hidden="true"
-        className="pointer-events-none fixed top-0 left-1/2 z-50 flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-full border border-gray-200 bg-white shadow-md transition-opacity duration-150 md:hidden"
+        className="relative flex min-h-0 flex-1 flex-col"
         style={{
-          opacity: pullDistance > 0 || isRefreshingSchedule ? 1 : 0,
-          transform: `translate(-50%, ${String(Math.max(pullDistance - 48, 0))}px)`,
+          transform: `translateY(${String(pullDistance)}px)`,
+          transition: isPullActive ? "none" : "transform 250ms ease-out",
         }}
       >
-        <svg
-          className={cn("h-5 w-5 text-gray-600", isRefreshingSchedule && "animate-spin")}
-          style={
-            isRefreshingSchedule
-              ? undefined
-              : {
-                  transform: `rotate(${String(Math.min(pullDistance * 4, 360))}deg)`,
-                }
-          }
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          viewBox="0 0 24 24"
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-12 left-1/2 z-40 flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-full border border-gray-200 bg-white shadow-md transition-opacity duration-150 md:hidden"
+          style={{
+            opacity: pullDistance > 0 || isRefreshingSchedule ? 1 : 0,
+          }}
         >
-          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-        </svg>
-      </div>
-
-      {!isAuthenticated ? (
-        <div className="border-b border-amber-200 bg-amber-50 px-3 py-3 md:px-6">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <ConnectGoogleButton className="w-full md:w-auto" />
-            <p className="max-w-2xl text-sm leading-6 text-amber-950">
-              Startup Rooms lets you preview the booking board before login and uses Google only to
-              authenticate you and perform room calendar actions you choose.
-            </p>
-          </div>
+          <svg
+            className="h-5 w-5 animate-spin text-gray-600"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            viewBox="0 0 24 24"
+          >
+            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+          </svg>
         </div>
-      ) : null}
 
-      <header className="flex items-center justify-between gap-2 border-b border-gray-200 px-3 py-2 md:px-6 md:py-4">
-        <div className="flex min-w-0 items-center gap-2 md:gap-3">
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={goToPreviousDay}
-              aria-label="Previous day"
-              className="h-7 w-7 p-0 md:h-8 md:w-8"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                className="h-4 w-4"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={goToNextDay}
-              aria-label="Next day"
-              className="h-7 w-7 p-0 md:h-8 md:w-8"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                className="h-4 w-4"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </Button>
-            {!displayedIsToday ? (
+        {!isAuthenticated ? (
+          <div className="border-b border-amber-200 bg-amber-50 px-3 py-3 md:px-6">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <ConnectGoogleButton className="w-full md:w-auto" />
+              <p className="max-w-2xl text-sm leading-6 text-amber-950">
+                Startup Rooms lets you preview the booking board before login and uses Google only
+                to authenticate you and perform room calendar actions you choose.
+              </p>
+            </div>
+          </div>
+        ) : null}
+
+        <header className="flex items-center justify-between gap-2 border-b border-gray-200 px-3 py-2 md:px-6 md:py-4">
+          <div className="flex min-w-0 items-center gap-2 md:gap-3">
+            <div className="flex items-center gap-1">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={goToToday}
-                className="ml-1 h-7 px-2 text-xs md:h-8 md:px-3 md:text-sm"
+                onClick={goToPreviousDay}
+                aria-label="Previous day"
+                className="h-7 w-7 p-0 md:h-8 md:w-8"
               >
-                Today
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="h-4 w-4"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z"
+                    clipRule="evenodd"
+                  />
+                </svg>
               </Button>
-            ) : null}
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-sm font-semibold tracking-tight text-gray-900 md:text-lg">
-              Room Schedule
-            </h1>
-            <p className="text-xs font-medium text-gray-500 md:text-sm">
-              {formatScheduleDate(displayedDate)}
-            </p>
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-2 md:gap-3">
-          {isRefreshingSchedule ? (
-            <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-500">
-              <span
-                className="h-2 w-2 animate-pulse rounded-full"
-                style={{ backgroundColor: ACCENT }}
-              />
-              <span>Refreshing…</span>
-            </div>
-          ) : null}
-          {isAuthenticated ? (
-            <div className="flex items-center gap-1.5 md:gap-2">
               <Button
+                variant="outline"
                 size="sm"
-                onClick={() => {
-                  openCreateModal();
-                }}
-                className="md:px-3 md:py-1.5 md:text-sm"
-                style={{ backgroundColor: ACCENT }}
+                onClick={goToNextDay}
+                aria-label="Next day"
+                className="h-7 w-7 p-0 md:h-8 md:w-8"
               >
-                New booking
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="h-4 w-4"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z"
+                    clipRule="evenodd"
+                  />
+                </svg>
               </Button>
-              {displayedIsToday && !isNavigatingToDifferentDate ? (
+              {!displayedIsToday ? (
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={scrollToNow}
-                  className="md:px-3 md:py-1.5 md:text-sm"
+                  onClick={goToToday}
+                  className="ml-1 h-7 px-2 text-xs md:h-8 md:px-3 md:text-sm"
                 >
-                  Now
+                  Today
                 </Button>
               ) : null}
             </div>
-          ) : null}
-        </div>
-      </header>
-
-      <div className="relative flex min-h-0 flex-1">
-        <div className="w-11 shrink-0 border-r border-gray-200 md:w-[200px]">
-          <div className="border-b border-gray-200" style={{ height: HEADER_HEIGHT }} />
-          {ROOMS.map((room) => {
-            const color = getRoomColor(room.id);
-            const isTooltipOpen = tooltipRoomId === room.id;
-
-            return (
-              <div
-                key={room.id}
-                className="relative flex items-center justify-center gap-3 border-b border-gray-100 px-1 md:justify-start md:px-4"
-                style={{ height: ROW_HEIGHT }}
-              >
-                <button
-                  type="button"
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full md:h-3 md:w-3 md:cursor-default"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setTooltipRoomId(isTooltipOpen ? null : room.id);
-                  }}
-                >
-                  <div
-                    className="h-3 w-3 shrink-0 rounded-full"
-                    style={{ backgroundColor: color.border }}
-                  />
-                </button>
-                {isTooltipOpen && (
-                  <div className="absolute left-10 z-30 whitespace-nowrap rounded-lg border border-gray-200 bg-white px-3 py-1.5 shadow-lg md:hidden">
-                    <p className="text-sm font-semibold leading-tight">{room.name}</p>
-                    <p className="text-xs text-gray-400">{room.capacityLabel}</p>
-                  </div>
-                )}
-                <div className="hidden min-w-0 md:block">
-                  <p className="truncate text-sm font-semibold leading-tight">{room.name}</p>
-                  <p className="text-xs text-gray-400">{room.capacityLabel}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="flex-1 overflow-x-auto" ref={scrollRef}>
-          <div style={{ position: "relative", width: totalWidth }}>
-            <div className="flex border-b border-gray-200" style={{ height: HEADER_HEIGHT }}>
-              {HOURS.map((hour) => (
-                <div
-                  key={hour}
-                  className="shrink-0 border-l border-gray-100 px-3 py-2 text-xs font-medium text-gray-400"
-                  style={{ width: HOUR_WIDTH }}
-                >
-                  {formatHour(hour)}
-                </div>
-              ))}
+            <div className="min-w-0">
+              <h1 className="text-sm font-semibold tracking-tight text-gray-900 md:text-lg">
+                Room Schedule
+              </h1>
+              <p className="text-xs font-medium text-gray-500 md:text-sm">
+                {formatScheduleDate(displayedDate)}
+              </p>
             </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2 md:gap-3">
+            {isRefreshingSchedule ? (
+              <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-500">
+                <span
+                  className="h-2 w-2 animate-pulse rounded-full"
+                  style={{ backgroundColor: ACCENT }}
+                />
+                <span>Refreshing…</span>
+              </div>
+            ) : null}
+            {isAuthenticated ? (
+              <div className="flex items-center gap-1.5 md:gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    openCreateModal();
+                  }}
+                  className="md:px-3 md:py-1.5 md:text-sm"
+                  style={{ backgroundColor: ACCENT }}
+                >
+                  New booking
+                </Button>
+                {displayedIsToday && !isNavigatingToDifferentDate ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={scrollToNow}
+                    className="md:px-3 md:py-1.5 md:text-sm"
+                  >
+                    Now
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        </header>
 
+        <div className="relative flex min-h-0 flex-1">
+          <div className="w-11 shrink-0 border-r border-gray-200 md:w-[200px]">
+            <div className="border-b border-gray-200" style={{ height: HEADER_HEIGHT }} />
             {ROOMS.map((room) => {
-              const roomBookings = isNavigatingToDifferentDate
-                ? []
-                : (bookingsByRoom.get(room.id) ?? []);
               const color = getRoomColor(room.id);
+              const isTooltipOpen = tooltipRoomId === room.id;
 
               return (
                 <div
                   key={room.id}
-                  className="relative border-b border-gray-50"
+                  className="relative flex items-center justify-center gap-3 border-b border-gray-100 px-1 md:justify-start md:px-4"
                   style={{ height: ROW_HEIGHT }}
                 >
-                  {HOURS.map((hour) => (
+                  <button
+                    type="button"
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full md:h-3 md:w-3 md:cursor-default"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTooltipRoomId(isTooltipOpen ? null : room.id);
+                    }}
+                  >
                     <div
-                      key={hour}
-                      className="absolute top-0 bottom-0 border-l border-gray-100"
-                      style={{ left: (hour - HOURS[0]) * HOUR_WIDTH }}
+                      className="h-3 w-3 shrink-0 rounded-full"
+                      style={{ backgroundColor: color.border }}
                     />
-                  ))}
-
-                  {isNavigatingToDifferentDate
-                    ? SKELETON_BLOCK_OFFSETS.map((offset, index) => (
-                        <div
-                          key={`${room.id}-skeleton-${String(index)}`}
-                          className="absolute top-1.5 bottom-1.5 animate-pulse rounded-lg border border-gray-200 bg-gray-100/90"
-                          style={{
-                            left: totalWidth * offset,
-                            width: totalWidth * SKELETON_BLOCK_WIDTHS[index],
-                          }}
-                        >
-                          <div className="px-3 py-2">
-                            <div className="h-2.5 w-20 rounded-full bg-gray-200" />
-                            <div className="mt-2 h-2 w-14 rounded-full bg-gray-200/80" />
-                          </div>
-                        </div>
-                      ))
-                    : roomBookings.map((booking) => {
-                        const left = (booking.startHour - HOURS[0]) * HOUR_WIDTH;
-                        const width = Math.max(
-                          (booking.endHour - booking.startHour) * HOUR_WIDTH,
-                          24,
-                        );
-
-                        return (
-                          <button
-                            key={booking.id}
-                            type="button"
-                            className="absolute top-1.5 bottom-1.5 flex cursor-pointer items-center overflow-hidden rounded-lg px-3 text-left transition-shadow hover:shadow-md"
-                            style={{
-                              backgroundColor: color.bg,
-                              borderLeft: `3px solid ${color.border}`,
-                              left,
-                              width,
-                            }}
-                            aria-label={`Edit booking ${booking.title} in ${room.name}`}
-                            onClick={() => {
-                              openEditModal(booking.id);
-                            }}
-                          >
-                            <div className="min-w-0">
-                              <p
-                                className="truncate text-sm font-semibold leading-tight"
-                                style={{ color: color.text }}
-                              >
-                                {booking.title}
-                              </p>
-                              <p
-                                className="truncate text-xs"
-                                style={{ color: color.text, opacity: 0.7 }}
-                              >
-                                {ROOMS.find((r) => r.id === booking.roomId)?.name}
-                              </p>
-                            </div>
-                          </button>
-                        );
-                      })}
-
-                  {isAuthenticated &&
-                  !isNavigatingToDifferentDate &&
-                  typeof roomCalendarIds[room.id] === "string" ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        openCreateModal(room.id);
-                      }}
-                      className="absolute top-1/2 right-3 -translate-y-1/2 rounded-full border border-dashed border-gray-300 text-xs text-gray-500 hover:border-gray-400 hover:text-gray-700"
-                    >
-                      Add
-                    </Button>
-                  ) : null}
+                  </button>
+                  {isTooltipOpen && (
+                    <div className="absolute left-10 z-30 whitespace-nowrap rounded-lg border border-gray-200 bg-white px-3 py-1.5 shadow-lg md:hidden">
+                      <p className="text-sm font-semibold leading-tight">{room.name}</p>
+                      <p className="text-xs text-gray-400">{room.capacityLabel}</p>
+                    </div>
+                  )}
+                  <div className="hidden min-w-0 md:block">
+                    <p className="truncate text-sm font-semibold leading-tight">{room.name}</p>
+                    <p className="text-xs text-gray-400">{room.capacityLabel}</p>
+                  </div>
                 </div>
               );
             })}
+          </div>
 
-            {displayedIsToday && !isNavigatingToDifferentDate && now !== null ? (
-              <div
-                className="pointer-events-none absolute"
-                style={{
-                  backgroundColor: "#EF4444",
-                  bottom: 0,
-                  height: HEADER_HEIGHT + ROOMS.length * ROW_HEIGHT,
-                  left: now,
-                  top: 0,
-                  width: 2,
-                  zIndex: 20,
-                }}
-              >
+          <div className="flex-1 overflow-x-auto" ref={scrollRef}>
+            <div style={{ position: "relative", width: totalWidth }}>
+              <div className="flex border-b border-gray-200" style={{ height: HEADER_HEIGHT }}>
+                {HOURS.map((hour) => (
+                  <div
+                    key={hour}
+                    className="shrink-0 border-l border-gray-100 px-3 py-2 text-xs font-medium text-gray-400"
+                    style={{ width: HOUR_WIDTH }}
+                  >
+                    {formatHour(hour)}
+                  </div>
+                ))}
+              </div>
+
+              {ROOMS.map((room) => {
+                const roomBookings = isNavigatingToDifferentDate
+                  ? []
+                  : (bookingsByRoom.get(room.id) ?? []);
+                const color = getRoomColor(room.id);
+
+                return (
+                  <div
+                    key={room.id}
+                    className="relative border-b border-gray-50"
+                    style={{ height: ROW_HEIGHT }}
+                  >
+                    {HOURS.map((hour) => (
+                      <div
+                        key={hour}
+                        className="absolute top-0 bottom-0 border-l border-gray-100"
+                        style={{ left: (hour - HOURS[0]) * HOUR_WIDTH }}
+                      />
+                    ))}
+
+                    {isNavigatingToDifferentDate
+                      ? SKELETON_BLOCK_OFFSETS.map((offset, index) => (
+                          <div
+                            key={`${room.id}-skeleton-${String(index)}`}
+                            className="absolute top-1.5 bottom-1.5 animate-pulse rounded-lg border border-gray-200 bg-gray-100/90"
+                            style={{
+                              left: totalWidth * offset,
+                              width: totalWidth * SKELETON_BLOCK_WIDTHS[index],
+                            }}
+                          >
+                            <div className="px-3 py-2">
+                              <div className="h-2.5 w-20 rounded-full bg-gray-200" />
+                              <div className="mt-2 h-2 w-14 rounded-full bg-gray-200/80" />
+                            </div>
+                          </div>
+                        ))
+                      : roomBookings.map((booking) => {
+                          const left = (booking.startHour - HOURS[0]) * HOUR_WIDTH;
+                          const width = Math.max(
+                            (booking.endHour - booking.startHour) * HOUR_WIDTH,
+                            24,
+                          );
+
+                          return (
+                            <button
+                              key={booking.id}
+                              type="button"
+                              className="absolute top-1.5 bottom-1.5 flex cursor-pointer items-center overflow-hidden rounded-lg px-3 text-left transition-shadow hover:shadow-md"
+                              style={{
+                                backgroundColor: color.bg,
+                                borderLeft: `3px solid ${color.border}`,
+                                left,
+                                width,
+                              }}
+                              aria-label={`Edit booking ${booking.title} in ${room.name}`}
+                              onClick={() => {
+                                openEditModal(booking.id);
+                              }}
+                            >
+                              <div className="min-w-0">
+                                <p
+                                  className="truncate text-sm font-semibold leading-tight"
+                                  style={{ color: color.text }}
+                                >
+                                  {booking.title}
+                                </p>
+                                <p
+                                  className="truncate text-xs"
+                                  style={{ color: color.text, opacity: 0.7 }}
+                                >
+                                  {ROOMS.find((r) => r.id === booking.roomId)?.name}
+                                </p>
+                              </div>
+                            </button>
+                          );
+                        })}
+
+                    {isAuthenticated &&
+                    !isNavigatingToDifferentDate &&
+                    typeof roomCalendarIds[room.id] === "string" ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          openCreateModal(room.id);
+                        }}
+                        className="absolute top-1/2 right-3 -translate-y-1/2 rounded-full border border-dashed border-gray-300 text-xs text-gray-500 hover:border-gray-400 hover:text-gray-700"
+                      >
+                        Add
+                      </Button>
+                    ) : null}
+                  </div>
+                );
+              })}
+
+              {displayedIsToday && !isNavigatingToDifferentDate && now !== null ? (
                 <div
-                  className="absolute -top-1 -left-1.5 h-3 w-3 rounded-full"
-                  style={{ backgroundColor: "#EF4444" }}
-                />
-              </div>
-            ) : null}
-
-            {isAuthenticated && !isNavigatingToDifferentDate && bookings.length === 0 ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-white/60">
-                <div className="rounded-xl border border-gray-200 bg-white px-6 py-5 text-center shadow-sm">
-                  <p className="text-base font-semibold text-gray-900">
-                    No bookings {displayedIsToday ? "today" : "on this day"}
-                  </p>
-                  <p className="mt-2 text-sm text-gray-500">
-                    Checked {String(roomCount)} room calendars
-                    {displayedIsToday ? " for today" : ""} in Amsterdam time.
-                  </p>
+                  className="pointer-events-none absolute"
+                  style={{
+                    backgroundColor: "#EF4444",
+                    bottom: 0,
+                    height: HEADER_HEIGHT + ROOMS.length * ROW_HEIGHT,
+                    left: now,
+                    top: 0,
+                    width: 2,
+                    zIndex: 20,
+                  }}
+                >
+                  <div
+                    className="absolute -top-1 -left-1.5 h-3 w-3 rounded-full"
+                    style={{ backgroundColor: "#EF4444" }}
+                  />
                 </div>
-              </div>
-            ) : null}
+              ) : null}
+
+              {isAuthenticated && !isNavigatingToDifferentDate && bookings.length === 0 ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-white/60">
+                  <div className="rounded-xl border border-gray-200 bg-white px-6 py-5 text-center shadow-sm">
+                    <p className="text-base font-semibold text-gray-900">
+                      No bookings {displayedIsToday ? "today" : "on this day"}
+                    </p>
+                    <p className="mt-2 text-sm text-gray-500">
+                      Checked {String(roomCount)} room calendars
+                      {displayedIsToday ? " for today" : ""} in Amsterdam time.
+                    </p>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </div>
+
+          {!isAuthenticated ? <LoggedOutScheduleOverlay /> : null}
         </div>
 
-        {!isAuthenticated ? <LoggedOutScheduleOverlay /> : null}
+        <footer className="border-t border-gray-200 px-4 py-3 text-xs text-gray-500 md:px-6">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <p>Gebruik op eigen risico. Data loopt via Google Calendar.</p>
+            <div className="flex items-center gap-4">
+              <Link className="transition hover:text-gray-900" to="/privacy">
+                Privacybeleid
+              </Link>
+              <Link className="transition hover:text-gray-900" to="/voorwaarden">
+                Algemene voorwaarden
+              </Link>
+              <a
+                className="transition hover:text-gray-900"
+                href="https://github.com/atimmer/startup-rooms"
+                rel="noreferrer"
+                target="_blank"
+              >
+                GitHub
+              </a>
+            </div>
+          </div>
+        </footer>
       </div>
-
-      <footer className="border-t border-gray-200 px-4 py-3 text-xs text-gray-500 md:px-6">
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <p>Gebruik op eigen risico. Data loopt via Google Calendar.</p>
-          <div className="flex items-center gap-4">
-            <Link className="transition hover:text-gray-900" to="/privacy">
-              Privacybeleid
-            </Link>
-            <Link className="transition hover:text-gray-900" to="/voorwaarden">
-              Algemene voorwaarden
-            </Link>
-            <a
-              className="transition hover:text-gray-900"
-              href="https://github.com/atimmer/startup-rooms"
-              rel="noreferrer"
-              target="_blank"
-            >
-              GitHub
-            </a>
-          </div>
-        </div>
-      </footer>
 
       <Dialog
         open={modalState !== null}
