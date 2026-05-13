@@ -53,11 +53,13 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export async function clientAction({ serverAction }: Route.ClientActionArgs) {
-  const response = await serverAction();
-
   clearClientScheduleCache();
 
-  return response;
+  try {
+    return await serverAction();
+  } finally {
+    clearClientScheduleCache();
+  }
 }
 
 function stripModalSearchParams(url: URL) {

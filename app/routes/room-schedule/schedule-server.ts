@@ -22,6 +22,20 @@ import type {
   ScheduleBooking,
 } from "./schedule-types";
 
+const MODAL_SEARCH_PARAM_KEYS = ["bookingId", "modal", "roomId"] as const;
+
+function getScheduleRedirectUrl(request: Request) {
+  const url = new URL(request.url);
+
+  for (const key of MODAL_SEARCH_PARAM_KEYS) {
+    url.searchParams.delete(key);
+  }
+
+  const search = url.searchParams.toString();
+
+  return search ? `/?${search}` : "/";
+}
+
 function resolveCreator(event: calendar_v3.Schema$Event): string {
   const candidates = [
     event.creator?.displayName,
@@ -345,7 +359,7 @@ export async function mutateScheduleBooking(request: Request) {
 
       session.set("googleTokens", refreshedTokens);
 
-      return redirect("/", {
+      return redirect(getScheduleRedirectUrl(request), {
         headers: {
           "Set-Cookie": await commitSession(session),
         },
@@ -451,7 +465,7 @@ export async function mutateScheduleBooking(request: Request) {
 
     session.set("googleTokens", refreshedTokens);
 
-    return redirect("/", {
+    return redirect(getScheduleRedirectUrl(request), {
       headers: {
         "Set-Cookie": await commitSession(session),
       },
