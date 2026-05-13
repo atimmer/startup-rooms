@@ -154,8 +154,15 @@ export function SchedulePage() {
     }
 
     clearClientScheduleCacheForUrl(window.location.href);
-    void revalidator.revalidate();
     isPullRefreshPendingRef.current = true;
+
+    void revalidator.revalidate().finally(() => {
+      isPullRefreshPendingRef.current = false;
+
+      window.requestAnimationFrame(() => {
+        setPullDistance(0);
+      });
+    });
 
     return true;
   });
@@ -566,7 +573,14 @@ export function SchedulePage() {
           }}
         >
           <svg
-            className="h-5 w-5 animate-spin text-gray-600"
+            className={cn("h-5 w-5 text-gray-600", isRefreshingSchedule && "animate-spin")}
+            style={
+              isRefreshingSchedule
+                ? undefined
+                : {
+                    transform: `rotate(${String(Math.min(pullDistance * 4, 360))}deg)`,
+                  }
+            }
             fill="none"
             stroke="currentColor"
             strokeWidth="2.5"
