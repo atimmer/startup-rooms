@@ -123,6 +123,7 @@ export function SchedulePage() {
   const [tooltipRoomId, setTooltipRoomId] = useState<string | null>(null);
   const [pullDistance, setPullDistance] = useState(0);
   const [isPullActive, setIsPullActive] = useState(false);
+  const [isPullRefreshActive, setIsPullRefreshActive] = useState(false);
 
   const refetchSchedule = useEffectEvent(() => {
     if (!isAuthenticated) {
@@ -155,12 +156,14 @@ export function SchedulePage() {
 
     clearClientScheduleCacheForUrl(window.location.href);
     isPullRefreshPendingRef.current = true;
+    setIsPullRefreshActive(true);
 
     void revalidator.revalidate().finally(() => {
       isPullRefreshPendingRef.current = false;
 
       window.requestAnimationFrame(() => {
         setPullDistance(0);
+        setIsPullRefreshActive(false);
       });
     });
 
@@ -358,6 +361,7 @@ export function SchedulePage() {
     isPullRefreshPendingRef.current = false;
     const frameId = window.requestAnimationFrame(() => {
       setPullDistance(0);
+      setIsPullRefreshActive(false);
     });
 
     return () => {
@@ -525,6 +529,7 @@ export function SchedulePage() {
   const displayedDate = pendingNavigationDate ?? date;
   const displayedIsToday = displayedDate === todayDate;
   const isRefreshingSchedule = revalidator.state === "loading";
+  const shouldShowRefreshLabel = isRefreshingSchedule && !isPullRefreshActive;
 
   function handleFormSubmit(event: FormSubmitEvent) {
     const nativeEvent = event.nativeEvent;
@@ -667,7 +672,7 @@ export function SchedulePage() {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2 md:gap-3">
-            {isRefreshingSchedule ? (
+            {shouldShowRefreshLabel ? (
               <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-500">
                 <span
                   className="h-2 w-2 animate-pulse rounded-full"
