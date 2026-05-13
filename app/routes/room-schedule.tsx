@@ -1,19 +1,14 @@
 import type { Route } from "./+types/room-schedule";
 import type { ShouldRevalidateFunctionArgs } from "react-router";
 import { SchedulePage } from "./room-schedule/schedule-page";
+import {
+  clearClientScheduleCache,
+  readClientScheduleCache,
+  writeClientScheduleCache,
+} from "./room-schedule/schedule-client-cache";
 import { loadScheduleData, mutateScheduleBooking } from "./room-schedule/schedule-server";
 
 const MODAL_SEARCH_PARAM_KEYS = ["bookingId", "modal", "roomId"] as const;
-const CLIENT_CACHE_TTL_MS = 60_000;
-
-type ScheduleLoaderData = Awaited<ReturnType<typeof loadScheduleData>>;
-
-interface ClientCacheEntry {
-  cachedAt: number;
-  data: ScheduleLoaderData;
-}
-
-const clientScheduleCache = new Map<string, ClientCacheEntry>();
 
 export function meta(_args: Route.MetaArgs) {
   return [
@@ -39,26 +34,16 @@ export async function loader({ request }: Route.LoaderArgs) {
   return loadScheduleData(request);
 }
 
-function getClientCacheKey(request: Request) {
-  const url = new URL(request.url);
-  return `${url.pathname}?${stripModalSearchParams(url)}`;
-}
-
 export async function clientLoader({ request, serverLoader }: Route.ClientLoaderArgs) {
-  const cacheKey = getClientCacheKey(request);
-  const existingEntry = clientScheduleCache.get(cacheKey);
-  const now = Date.now();
+  const cachedData = readClientScheduleCache(request);
 
-  if (existingEntry && now - existingEntry.cachedAt < CLIENT_CACHE_TTL_MS) {
-    return existingEntry.data;
+  if (cachedData) {
+    return cachedData;
   }
 
   const data = await serverLoader();
 
-  clientScheduleCache.set(cacheKey, {
-    cachedAt: now,
-    data,
-  });
+  writeClientScheduleCache(request, data);
 
   return data;
 }
@@ -70,7 +55,7 @@ export async function action({ request }: Route.ActionArgs) {
 export async function clientAction({ serverAction }: Route.ClientActionArgs) {
   const response = await serverAction();
 
-  clientScheduleCache.clear();
+  clearClientScheduleCache();
 
   return response;
 }

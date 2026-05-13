@@ -25,10 +25,10 @@ import {
   getCurrentTimeOffset,
   getTodayAmsterdamDate,
 } from "./schedule-time";
+import { clearClientScheduleCacheForUrl } from "./schedule-client-cache";
 import type { ActionData, LoaderData, ModalState, ScheduleBooking } from "./schedule-types";
 
 type FormSubmitEvent = Parameters<NonNullable<ComponentProps<typeof Form>["onSubmit"]>>[0];
-const FOCUS_REFRESH_COOLDOWN_MS = 60_000;
 const SKELETON_BLOCK_OFFSETS = [0.08, 0.38, 0.68] as const;
 const SKELETON_BLOCK_WIDTHS = [0.18, 0.24, 0.16] as const;
 
@@ -111,10 +111,10 @@ export function SchedulePage() {
   const [pendingIntent, setPendingIntent] = useState<"create" | "delete" | "update" | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasAutoScrolledRef = useRef(false);
-  const lastFocusRefreshAtRef = useRef(0);
+  const focusRefreshFrameRef = useRef<number | null>(null);
   const [tooltipRoomId, setTooltipRoomId] = useState<string | null>(null);
 
-  const refreshScheduleIfStale = useEffectEvent(() => {
+  const refetchScheduleOnWindowFocus = useEffectEvent(() => {
     if (!isAuthenticated) {
       return;
     }
@@ -127,14 +127,15 @@ export function SchedulePage() {
       return;
     }
 
-    const nowValue = Date.now();
-
-    if (nowValue - lastFocusRefreshAtRef.current < FOCUS_REFRESH_COOLDOWN_MS) {
+    if (focusRefreshFrameRef.current !== null) {
       return;
     }
 
-    lastFocusRefreshAtRef.current = nowValue;
-    void revalidator.revalidate();
+    focusRefreshFrameRef.current = window.requestAnimationFrame(() => {
+      focusRefreshFrameRef.current = null;
+      clearClientScheduleCacheForUrl(window.location.href);
+      void revalidator.revalidate();
+    });
   });
 
   useEffect(() => {
@@ -163,11 +164,11 @@ export function SchedulePage() {
 
   useEffect(() => {
     function handleVisibilityChange() {
-      refreshScheduleIfStale();
+      refetchScheduleOnWindowFocus();
     }
 
     function handleWindowFocus() {
-      refreshScheduleIfStale();
+      refetchScheduleOnWindowFocus();
     }
 
     function handlePageShow(event: PageTransitionEvent) {
@@ -175,7 +176,7 @@ export function SchedulePage() {
         return;
       }
 
-      refreshScheduleIfStale();
+      refetchScheduleOnWindowFocus();
     }
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -186,6 +187,10 @@ export function SchedulePage() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("focus", handleWindowFocus);
       window.removeEventListener("pageshow", handlePageShow);
+
+      if (focusRefreshFrameRef.current !== null) {
+        window.cancelAnimationFrame(focusRefreshFrameRef.current);
+      }
     };
   }, []);
 
