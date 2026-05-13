@@ -29,6 +29,9 @@ import { clearClientScheduleCacheForUrl } from "./schedule-client-cache";
 import type { ActionData, LoaderData, ModalState, ScheduleBooking } from "./schedule-types";
 
 type FormSubmitEvent = Parameters<NonNullable<ComponentProps<typeof Form>["onSubmit"]>>[0];
+const PULL_REFRESH_MAX_DISTANCE = 96;
+const PULL_REFRESH_THRESHOLD = 72;
+const PULL_REFRESH_TRIGGER_DISTANCE = 52;
 const SKELETON_BLOCK_OFFSETS = [0.08, 0.38, 0.68] as const;
 const SKELETON_BLOCK_WIDTHS = [0.18, 0.24, 0.16] as const;
 
@@ -112,9 +115,15 @@ export function SchedulePage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasAutoScrolledRef = useRef(false);
   const focusRefreshFrameRef = useRef<number | null>(null);
+  const pullStartYRef = useRef<number | null>(null);
+  const pullStartXRef = useRef<number | null>(null);
+  const pullDistanceRef = useRef(0);
+  const isPullingRef = useRef(false);
+  const isPullRefreshPendingRef = useRef(false);
   const [tooltipRoomId, setTooltipRoomId] = useState<string | null>(null);
+  const [pullDistance, setPullDistance] = useState(0);
 
-  const refetchScheduleOnWindowFocus = useEffectEvent(() => {
+  const refetchSchedule = useEffectEvent(() => {
     if (!isAuthenticated) {
       return;
     }
@@ -136,6 +145,18 @@ export function SchedulePage() {
       clearClientScheduleCacheForUrl(window.location.href);
       void revalidator.revalidate();
     });
+  });
+
+  const refreshScheduleFromPull = useEffectEvent(() => {
+    if (!isAuthenticated || revalidator.state !== "idle") {
+      return false;
+    }
+
+    clearClientScheduleCacheForUrl(window.location.href);
+    void revalidator.revalidate();
+    isPullRefreshPendingRef.current = true;
+
+    return true;
   });
 
   useEffect(() => {
@@ -164,11 +185,11 @@ export function SchedulePage() {
 
   useEffect(() => {
     function handleVisibilityChange() {
-      refetchScheduleOnWindowFocus();
+      refetchSchedule();
     }
 
     function handleWindowFocus() {
-      refetchScheduleOnWindowFocus();
+      refetchSchedule();
     }
 
     function handlePageShow(event: PageTransitionEvent) {
@@ -176,7 +197,7 @@ export function SchedulePage() {
         return;
       }
 
-      refetchScheduleOnWindowFocus();
+      refetchSchedule();
     }
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -223,6 +244,116 @@ export function SchedulePage() {
       window.cancelAnimationFrame(frameId);
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const isMobileViewport = () => window.matchMedia("(max-width: 767px)").matches;
+    const resetPullState = () => {
+      pullStartYRef.current = null;
+      pullStartXRef.current = null;
+      pullDistanceRef.current = 0;
+      isPullingRef.current = false;
+    };
+
+    function handleTouchStart(event: TouchEvent) {
+      if (!isAuthenticated || !isMobileViewport() || event.touches.length !== 1) {
+        resetPullState();
+        return;
+      }
+
+      const touch = event.touches.item(0);
+
+      if (!touch || window.scrollY > 0) {
+        resetPullState();
+        return;
+      }
+
+      pullStartYRef.current = touch.clientY;
+      pullStartXRef.current = touch.clientX;
+      pullDistanceRef.current = 0;
+      isPullingRef.current = false;
+    }
+
+    function handleTouchMove(event: TouchEvent) {
+      const startY = pullStartYRef.current;
+      const startX = pullStartXRef.current;
+      const touch = event.touches.item(0);
+
+      if (startY === null || startX === null || !touch) {
+        return;
+      }
+
+      const deltaY = touch.clientY - startY;
+      const deltaX = Math.abs(touch.clientX - startX);
+
+      if (deltaY <= 0) {
+        return;
+      }
+
+      if (!isPullingRef.current && (deltaY < 10 || deltaY < deltaX * 1.35)) {
+        return;
+      }
+
+      if (window.scrollY > 0) {
+        resetPullState();
+        setPullDistance(0);
+        return;
+      }
+
+      event.preventDefault();
+
+      const nextDistance = Math.min(deltaY * 0.48, PULL_REFRESH_MAX_DISTANCE);
+      isPullingRef.current = true;
+      pullDistanceRef.current = nextDistance;
+      setPullDistance(nextDistance);
+    }
+
+    function handleTouchEnd() {
+      if (!isPullingRef.current) {
+        resetPullState();
+        return;
+      }
+
+      const shouldRefresh = pullDistanceRef.current >= PULL_REFRESH_THRESHOLD;
+      resetPullState();
+
+      if (shouldRefresh && refreshScheduleFromPull()) {
+        setPullDistance(PULL_REFRESH_TRIGGER_DISTANCE);
+      } else {
+        setPullDistance(0);
+      }
+    }
+
+    document.addEventListener("touchstart", handleTouchStart);
+    document.addEventListener("touchmove", handleTouchMove, { passive: false });
+    document.addEventListener("touchend", handleTouchEnd);
+    document.addEventListener("touchcancel", handleTouchEnd);
+
+    return () => {
+      document.removeEventListener("touchstart", handleTouchStart);
+      document.removeEventListener("touchmove", handleTouchMove);
+      document.removeEventListener("touchend", handleTouchEnd);
+      document.removeEventListener("touchcancel", handleTouchEnd);
+    };
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (revalidator.state !== "idle" || !isPullRefreshPendingRef.current) {
+      return;
+    }
+
+    isPullRefreshPendingRef.current = false;
+    const frameId = window.requestAnimationFrame(() => {
+      setPullDistance(0);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [revalidator.state]);
 
   function scrollToNow() {
     const offset = getCurrentTimeOffset();
@@ -415,8 +546,34 @@ export function SchedulePage() {
   return (
     <div
       style={{ fontFamily: "'Source Sans 3', sans-serif" }}
-      className="flex min-h-screen flex-col bg-white text-gray-900"
+      className="flex min-h-screen flex-col overscroll-y-contain bg-white text-gray-900"
     >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed top-0 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-b-full border-x border-b border-gray-200 bg-white/95 px-4 py-2 text-xs font-semibold text-gray-600 shadow-sm backdrop-blur transition-opacity duration-150 md:hidden"
+        style={{
+          opacity: pullDistance > 0 || isRefreshingSchedule ? 1 : 0,
+          transform: `translate(-50%, ${String(Math.max(pullDistance - 44, 0))}px)`,
+        }}
+      >
+        <span
+          className={cn(
+            "h-2.5 w-2.5 rounded-full",
+            pullDistance >= PULL_REFRESH_THRESHOLD || isRefreshingSchedule
+              ? "animate-pulse"
+              : undefined,
+          )}
+          style={{ backgroundColor: ACCENT }}
+        />
+        <span>
+          {isRefreshingSchedule
+            ? "Refreshing..."
+            : pullDistance >= PULL_REFRESH_THRESHOLD
+              ? "Release to refresh"
+              : "Pull to refresh"}
+        </span>
+      </div>
+
       {!isAuthenticated ? (
         <div className="border-b border-amber-200 bg-amber-50 px-3 py-3 md:px-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
