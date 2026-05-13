@@ -90,7 +90,7 @@ export function shouldRevalidate({
   const nextSearch = stripModalSearchParams(nextUrl);
 
   if (currentSearch === nextSearch) {
-    return false;
+    return currentUrl.search === nextUrl.search ? defaultShouldRevalidate : false;
   }
 
   return defaultShouldRevalidate;

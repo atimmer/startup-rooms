@@ -30,7 +30,7 @@ import type { ActionData, LoaderData, ModalState, ScheduleBooking } from "./sche
 
 type FormSubmitEvent = Parameters<NonNullable<ComponentProps<typeof Form>["onSubmit"]>>[0];
 const PULL_REFRESH_MAX_DISTANCE = 96;
-const PULL_REFRESH_THRESHOLD = 72;
+const PULL_REFRESH_THRESHOLD = 52;
 const PULL_REFRESH_TRIGGER_DISTANCE = 52;
 const SKELETON_BLOCK_OFFSETS = [0.08, 0.38, 0.68] as const;
 const SKELETON_BLOCK_WIDTHS = [0.18, 0.24, 0.16] as const;
