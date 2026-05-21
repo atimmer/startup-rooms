@@ -1047,23 +1047,8 @@ export function SchedulePage() {
                 </p>
               ) : null}
 
-              <div className="flex justify-between gap-3">
-                {canDeleteSelectedBooking ? (
-                  <Button
-                    variant="destructive"
-                    size="lg"
-                    disabled={isSubmitting}
-                    name="intent"
-                    type="submit"
-                    value="delete"
-                  >
-                    {isDeleting ? "Deleting..." : "Delete"}
-                  </Button>
-                ) : (
-                  <span />
-                )}
-
-                <div className="flex gap-2">
+              <div className="flex items-center justify-between gap-3">
+                <div className="ml-auto flex gap-2">
                   <Button
                     variant="ghost"
                     size="lg"
@@ -1094,6 +1079,20 @@ export function SchedulePage() {
                         : "Save changes"}
                   </Button>
                 </div>
+
+                {canDeleteSelectedBooking ? (
+                  <Button
+                    className="order-first mr-auto"
+                    variant="destructive"
+                    size="lg"
+                    disabled={isSubmitting}
+                    name="intent"
+                    type="submit"
+                    value="delete"
+                  >
+                    {isDeleting ? "Deleting..." : "Delete"}
+                  </Button>
+                ) : null}
               </div>
             </Form>
           </DialogContent>
