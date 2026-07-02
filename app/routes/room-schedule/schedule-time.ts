@@ -86,6 +86,14 @@ export function formatDateTimeLocalInTimeZone(value: string, timeZone: string) {
     .toString({ smallestUnit: "minute" });
 }
 
+export function formatDateTimeLocalForHour(date: string, hourValue: number) {
+  const totalMinutes = Math.round(clampHour(hourValue) * 60);
+  const hour = Math.floor(totalMinutes / 60);
+  const minute = totalMinutes - hour * 60;
+
+  return `${date}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
 export function createDefaultBookingValues(roomId?: string, dateParam?: string) {
   const { date } = getAmsterdamDayBounds(dateParam);
   const fallbackRoomId = ROOMS[0]?.id ?? "";
@@ -96,10 +104,10 @@ export function createDefaultBookingValues(roomId?: string, dateParam?: string) 
   const endHour = Math.min(startHour + 1, maxHour + 1);
 
   return {
-    endLocal: `${date}T${String(endHour).padStart(2, "0")}:00`,
+    endLocal: formatDateTimeLocalForHour(date, endHour),
     intent: "create" as const,
     roomId: roomId ?? fallbackRoomId,
-    startLocal: `${date}T${String(startHour).padStart(2, "0")}:00`,
+    startLocal: formatDateTimeLocalForHour(date, startHour),
     title: "",
   } satisfies ModalValues;
 }

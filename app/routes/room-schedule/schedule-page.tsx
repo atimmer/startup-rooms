@@ -20,20 +20,40 @@ import { HOURS, ROOMS, formatHour } from "../../data/rooms";
 import { ACCENT, HEADER_HEIGHT, HOUR_WIDTH, ROW_HEIGHT, getRoomColor } from "./schedule-styles";
 import {
   createDefaultBookingValues,
+  formatDateTimeLocalForHour,
   formatScheduleDate,
   getAdjacentDate,
   getCurrentTimeOffset,
   getTodayAmsterdamDate,
+  parseDateTimeLocal,
 } from "./schedule-time";
 import { clearClientScheduleCacheForUrl } from "./schedule-client-cache";
 import type { ActionData, LoaderData, ModalState, ScheduleBooking } from "./schedule-types";
 
 type FormSubmitEvent = Parameters<NonNullable<ComponentProps<typeof Form>["onSubmit"]>>[0];
+type ScheduleRowPointerEvent = Parameters<NonNullable<ComponentProps<"div">["onPointerDown"]>>[0];
 const PULL_REFRESH_MAX_DISTANCE = 96;
 const PULL_REFRESH_THRESHOLD = 52;
 const PULL_REFRESH_TRIGGER_DISTANCE = 52;
+const DRAG_CREATE_MIN_DISTANCE = 6;
+const DRAG_CREATE_SLOT_MINUTES = 15;
 const SKELETON_BLOCK_OFFSETS = [0.08, 0.38, 0.68] as const;
 const SKELETON_BLOCK_WIDTHS = [0.18, 0.24, 0.16] as const;
+const DRAG_CREATE_SLOT_WIDTH = (HOUR_WIDTH * DRAG_CREATE_SLOT_MINUTES) / 60;
+
+interface DragSelection {
+  currentX: number;
+  pointerId: number;
+  roomId: string;
+  startX: number;
+}
+
+interface DragSelectionBounds {
+  endHour: number;
+  left: number;
+  startHour: number;
+  width: number;
+}
 
 function ConnectGoogleButton({
   className,
@@ -102,6 +122,57 @@ function LoggedOutScheduleOverlay() {
   );
 }
 
+function createCreateModalValues(
+  roomId: string | undefined,
+  dateParam: string | undefined,
+  startLocal: string | null,
+  endLocal: string | null,
+) {
+  const values = createDefaultBookingValues(roomId, dateParam);
+
+  if (!startLocal || !endLocal || startLocal >= endLocal) {
+    return values;
+  }
+
+  return {
+    ...values,
+    endLocal,
+    startLocal,
+  };
+}
+
+function getBoundedScheduleX(element: HTMLDivElement, clientX: number, totalWidth: number) {
+  const rect = element.getBoundingClientRect();
+
+  return Math.min(Math.max(clientX - rect.left, 0), totalWidth);
+}
+
+function snapScheduleX(value: number, totalWidth: number) {
+  return Math.min(
+    Math.max(Math.round(value / DRAG_CREATE_SLOT_WIDTH) * DRAG_CREATE_SLOT_WIDTH, 0),
+    totalWidth,
+  );
+}
+
+function getDragSelectionBounds(selection: DragSelection, totalWidth: number): DragSelectionBounds {
+  const anchorX = snapScheduleX(selection.startX, totalWidth);
+  const currentX = snapScheduleX(selection.currentX, totalWidth);
+  let left = Math.min(anchorX, currentX);
+  let right = Math.max(anchorX, currentX);
+
+  if (left === right) {
+    left = Math.min(left, Math.max(totalWidth - DRAG_CREATE_SLOT_WIDTH, 0));
+    right = Math.min(left + DRAG_CREATE_SLOT_WIDTH, totalWidth);
+  }
+
+  return {
+    endHour: HOURS[0] + right / HOUR_WIDTH,
+    left,
+    startHour: HOURS[0] + left / HOUR_WIDTH,
+    width: right - left,
+  };
+}
+
 export function SchedulePage() {
   const { bookings, currentUserEmail, date, isAuthenticated, roomCalendarIds, roomCount } =
     useLoaderData<LoaderData>();
@@ -120,10 +191,12 @@ export function SchedulePage() {
   const pullDistanceRef = useRef(0);
   const isPullingRef = useRef(false);
   const isPullRefreshPendingRef = useRef(false);
+  const dragSelectionRef = useRef<DragSelection | null>(null);
   const [tooltipRoomId, setTooltipRoomId] = useState<string | null>(null);
   const [pullDistance, setPullDistance] = useState(0);
   const [isPullActive, setIsPullActive] = useState(false);
   const [isPullRefreshActive, setIsPullRefreshActive] = useState(false);
+  const [dragSelection, setDragSelection] = useState<DragSelection | null>(null);
 
   const refetchSchedule = useEffectEvent(() => {
     if (!isAuthenticated) {
@@ -383,8 +456,10 @@ export function SchedulePage() {
   function navigateToDate(nextDate: string | null) {
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete("bookingId");
+    nextParams.delete("endLocal");
     nextParams.delete("modal");
     nextParams.delete("roomId");
+    nextParams.delete("startLocal");
 
     if (nextDate) {
       nextParams.set("date", nextDate);
@@ -407,7 +482,7 @@ export function SchedulePage() {
     navigateToDate(null);
   }
 
-  function openCreateModal(nextRoomId?: string) {
+  function openCreateModal(nextRoomId?: string, nextStartLocal?: string, nextEndLocal?: string) {
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete("bookingId");
     nextParams.set("modal", "create");
@@ -419,12 +494,22 @@ export function SchedulePage() {
       nextParams.delete("roomId");
     }
 
+    if (nextStartLocal && nextEndLocal) {
+      nextParams.set("startLocal", nextStartLocal);
+      nextParams.set("endLocal", nextEndLocal);
+    } else {
+      nextParams.delete("startLocal");
+      nextParams.delete("endLocal");
+    }
+
     setSearchParams(nextParams);
   }
 
   function openEditModal(nextBookingId: string) {
     const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("endLocal");
     nextParams.delete("roomId");
+    nextParams.delete("startLocal");
     nextParams.set("bookingId", nextBookingId);
     nextParams.set("modal", "edit");
     setPendingIntent(null);
@@ -434,8 +519,10 @@ export function SchedulePage() {
   function closeModal() {
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete("bookingId");
+    nextParams.delete("endLocal");
     nextParams.delete("modal");
     nextParams.delete("roomId");
+    nextParams.delete("startLocal");
     setPendingIntent(null);
     setSearchParams(nextParams);
   }
@@ -443,6 +530,8 @@ export function SchedulePage() {
   const totalWidth = HOURS.length * HOUR_WIDTH;
   const modalKind = searchParams.get("modal");
   const requestedRoomId = searchParams.get("roomId") ?? undefined;
+  const requestedStartLocal = parseDateTimeLocal(searchParams.get("startLocal"));
+  const requestedEndLocal = parseDateTimeLocal(searchParams.get("endLocal"));
   const selectedBookingId = searchParams.get("bookingId");
   const bookingsByRoom = new Map<string, ScheduleBooking[]>();
   let selectedBooking: ScheduleBooking | null = null;
@@ -469,7 +558,12 @@ export function SchedulePage() {
           values:
             defaultActionValues?.intent === "create"
               ? defaultActionValues
-              : createDefaultBookingValues(requestedRoomId, date),
+              : createCreateModalValues(
+                  requestedRoomId,
+                  date,
+                  requestedStartLocal,
+                  requestedEndLocal,
+                ),
         }
       : modalKind === "edit" && selectedBooking
         ? {
@@ -530,6 +624,117 @@ export function SchedulePage() {
   const displayedIsToday = displayedDate === todayDate;
   const isRefreshingSchedule = revalidator.state === "loading";
   const shouldShowRefreshLabel = isRefreshingSchedule && !isPullRefreshActive;
+
+  function updateDragSelection(nextSelection: DragSelection | null) {
+    dragSelectionRef.current = nextSelection;
+    setDragSelection(nextSelection);
+  }
+
+  function canDragCreateInRoom(roomId: string) {
+    return (
+      isAuthenticated && !isNavigatingToDifferentDate && typeof roomCalendarIds[roomId] === "string"
+    );
+  }
+
+  function handleSchedulePointerDown(event: ScheduleRowPointerEvent, roomId: string) {
+    if (
+      !canDragCreateInRoom(roomId) ||
+      !event.isPrimary ||
+      event.button !== 0 ||
+      event.pointerType === "touch"
+    ) {
+      return;
+    }
+
+    const target = event.target;
+
+    if (!(target instanceof Element) || target.closest("button, a, input, select, textarea")) {
+      return;
+    }
+
+    const startX = getBoundedScheduleX(event.currentTarget, event.clientX, totalWidth);
+    const nextSelection = {
+      currentX: startX,
+      pointerId: event.pointerId,
+      roomId,
+      startX,
+    };
+
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.preventDefault();
+    updateDragSelection(nextSelection);
+  }
+
+  function handleSchedulePointerMove(event: ScheduleRowPointerEvent) {
+    const activeSelection = dragSelectionRef.current;
+
+    if (activeSelection === null) {
+      return;
+    }
+
+    if (activeSelection.pointerId !== event.pointerId) {
+      return;
+    }
+
+    event.preventDefault();
+    updateDragSelection({
+      ...activeSelection,
+      currentX: getBoundedScheduleX(event.currentTarget, event.clientX, totalWidth),
+    });
+  }
+
+  function handleSchedulePointerUp(event: ScheduleRowPointerEvent) {
+    const activeSelection = dragSelectionRef.current;
+
+    if (activeSelection === null) {
+      return;
+    }
+
+    if (activeSelection.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const finalSelection = {
+      ...activeSelection,
+      currentX: getBoundedScheduleX(event.currentTarget, event.clientX, totalWidth),
+    };
+    const distance = Math.abs(finalSelection.currentX - finalSelection.startX);
+    const bounds = getDragSelectionBounds(finalSelection, totalWidth);
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    updateDragSelection(null);
+
+    if (distance < DRAG_CREATE_MIN_DISTANCE || !canDragCreateInRoom(finalSelection.roomId)) {
+      return;
+    }
+
+    openCreateModal(
+      finalSelection.roomId,
+      formatDateTimeLocalForHour(date, bounds.startHour),
+      formatDateTimeLocalForHour(date, bounds.endHour),
+    );
+  }
+
+  function handleSchedulePointerCancel(event: ScheduleRowPointerEvent) {
+    const activeSelection = dragSelectionRef.current;
+
+    if (activeSelection === null) {
+      return;
+    }
+
+    if (activeSelection.pointerId !== event.pointerId) {
+      return;
+    }
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    updateDragSelection(null);
+  }
 
   function handleFormSubmit(event: FormSubmitEvent) {
     const nativeEvent = event.nativeEvent;
@@ -768,12 +973,26 @@ export function SchedulePage() {
                   ? []
                   : (bookingsByRoom.get(room.id) ?? []);
                 const color = getRoomColor(room.id);
+                const canCreateInRoom = canDragCreateInRoom(room.id);
+                const activeDragBounds =
+                  dragSelection?.roomId === room.id
+                    ? getDragSelectionBounds(dragSelection, totalWidth)
+                    : null;
 
                 return (
                   <div
                     key={room.id}
-                    className="relative border-b border-gray-50"
+                    className={cn(
+                      "relative select-none border-b border-gray-50",
+                      canCreateInRoom && "cursor-crosshair",
+                    )}
                     style={{ height: ROW_HEIGHT }}
+                    onPointerDown={(event) => {
+                      handleSchedulePointerDown(event, room.id);
+                    }}
+                    onPointerMove={handleSchedulePointerMove}
+                    onPointerUp={handleSchedulePointerUp}
+                    onPointerCancel={handleSchedulePointerCancel}
                   >
                     {HOURS.map((hour) => (
                       <div
@@ -783,11 +1002,34 @@ export function SchedulePage() {
                       />
                     ))}
 
+                    {activeDragBounds ? (
+                      <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute top-1.5 bottom-1.5 z-10 flex items-center overflow-hidden rounded-lg border border-dashed px-3 shadow-sm"
+                        style={{
+                          backgroundColor: color.bg,
+                          borderColor: color.border,
+                          left: activeDragBounds.left,
+                          width: activeDragBounds.width,
+                        }}
+                      >
+                        {activeDragBounds.width >= 96 ? (
+                          <span
+                            className="truncate text-xs font-semibold"
+                            style={{ color: color.text }}
+                          >
+                            {formatHour(activeDragBounds.startHour)} -{" "}
+                            {formatHour(activeDragBounds.endHour)}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
+
                     {isNavigatingToDifferentDate
                       ? SKELETON_BLOCK_OFFSETS.map((offset, index) => (
                           <div
                             key={`${room.id}-skeleton-${String(index)}`}
-                            className="absolute top-1.5 bottom-1.5 animate-pulse rounded-lg border border-gray-200 bg-gray-100/90"
+                            className="absolute top-1.5 bottom-1.5 z-20 animate-pulse rounded-lg border border-gray-200 bg-gray-100/90"
                             style={{
                               left: totalWidth * offset,
                               width: totalWidth * SKELETON_BLOCK_WIDTHS[index],
@@ -810,7 +1052,7 @@ export function SchedulePage() {
                             <button
                               key={booking.id}
                               type="button"
-                              className="absolute top-1.5 bottom-1.5 flex cursor-pointer items-center overflow-hidden rounded-lg px-3 text-left transition-shadow hover:shadow-md"
+                              className="absolute top-1.5 bottom-1.5 z-20 flex cursor-pointer items-center overflow-hidden rounded-lg px-3 text-left transition-shadow hover:shadow-md"
                               style={{
                                 backgroundColor: color.bg,
                                 borderLeft: `3px solid ${color.border}`,
@@ -849,7 +1091,7 @@ export function SchedulePage() {
                         onClick={() => {
                           openCreateModal(room.id);
                         }}
-                        className="absolute top-1/2 right-3 -translate-y-1/2 rounded-full border border-dashed border-gray-300 text-xs text-gray-500 hover:border-gray-400 hover:text-gray-700"
+                        className="absolute top-1/2 right-3 z-20 -translate-y-1/2 rounded-full border border-dashed border-gray-300 text-xs text-gray-500 hover:border-gray-400 hover:text-gray-700"
                       >
                         Add
                       </Button>
@@ -879,7 +1121,7 @@ export function SchedulePage() {
               ) : null}
 
               {isAuthenticated && !isNavigatingToDifferentDate && bookings.length === 0 ? (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/60">
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-white/60">
                   <div className="rounded-xl border border-gray-200 bg-white px-6 py-5 text-center shadow-sm">
                     <p className="text-base font-semibold text-gray-900">
                       No bookings {displayedIsToday ? "today" : "on this day"}

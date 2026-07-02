@@ -22,7 +22,7 @@ import type {
   ScheduleBooking,
 } from "./schedule-types";
 
-const MODAL_SEARCH_PARAM_KEYS = ["bookingId", "modal", "roomId"] as const;
+const MODAL_SEARCH_PARAM_KEYS = ["bookingId", "endLocal", "modal", "roomId", "startLocal"] as const;
 
 function getScheduleRedirectUrl(request: Request) {
   const url = new URL(request.url);

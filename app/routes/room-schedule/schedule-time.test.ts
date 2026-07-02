@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   GOOGLE_CALENDAR_TIME_ZONE,
+  formatDateTimeLocalForHour,
   formatDateTimeLocalInTimeZone,
   getAmsterdamDayBounds,
   getHourValue,
@@ -30,5 +31,10 @@ describe("schedule timezone handling", () => {
       "2026-03-29T03:30",
     );
     expect(getHourValue(instant)).toBe(3.5);
+  });
+
+  it("formats schedule hour positions as datetime-local values", () => {
+    expect(formatDateTimeLocalForHour("2026-07-02", 8.25)).toBe("2026-07-02T08:15");
+    expect(formatDateTimeLocalForHour("2026-07-02", 17.75)).toBe("2026-07-02T17:45");
   });
 });

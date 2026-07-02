@@ -8,7 +8,7 @@ import {
 } from "./room-schedule/schedule-client-cache";
 import { loadScheduleData, mutateScheduleBooking } from "./room-schedule/schedule-server";
 
-const MODAL_SEARCH_PARAM_KEYS = ["bookingId", "modal", "roomId"] as const;
+const MODAL_SEARCH_PARAM_KEYS = ["bookingId", "endLocal", "modal", "roomId", "startLocal"] as const;
 
 export function meta(_args: Route.MetaArgs) {
   return [
