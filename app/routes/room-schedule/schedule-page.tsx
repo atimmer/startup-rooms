@@ -83,39 +83,70 @@ function ConnectGoogleButton({
 
 function LoggedOutScheduleOverlay() {
   return (
-    <div className="absolute inset-0 z-30 flex items-center justify-center bg-gradient-to-b from-stone-950/20 via-stone-950/50 to-stone-950/80 backdrop-blur-[3px]">
-      <div className="mx-4 w-full max-w-md text-center">
-        <img
-          alt="Startup Rooms"
-          className="mx-auto mb-6 h-16 w-16 drop-shadow-lg"
-          src="/logo.png"
-        />
-
-        <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-          Startup Rooms
+    <div className="absolute inset-0 z-30 flex items-center justify-center bg-gradient-to-b from-stone-950/[0.18] via-stone-950/40 via-55% to-stone-950/55 p-4 backdrop-blur-[3px]">
+      <div className="w-full max-w-[400px] rounded-xl border border-gray-200 bg-white p-6 text-left shadow-lg md:p-7">
+        <h2 className="text-xl font-semibold tracking-tight text-gray-900 md:text-[22px]">
+          Nijmegen Startup Rooms
         </h2>
-        <p className="mt-3 text-base leading-relaxed text-stone-300">
-          Book meeting rooms at Startup Nijmegen. Sign in with Google to view availability and
-          manage reservations.
+
+        <p className="mt-3 text-sm leading-[1.6] text-gray-600">
+          Deze app maakt het eenvoudig om meetingruimtes te boeken en in te zien bij{" "}
+          <a
+            className="underline underline-offset-3 transition hover:text-gray-900"
+            href="https://startupnijmegen.nl/"
+            rel="noreferrer"
+            target="_blank"
+          >
+            Startup Nijmegen
+          </a>
+          . Ik heb deze app gemaakt omdat ik zelf vind dat Google Calendar geen fijne UI heeft voor
+          het beheren van de meetingruimtes. Ik mis overzicht en gemak. Dat heeft deze app wel.
+        </p>
+        <p className="mt-3 text-sm leading-[1.6] text-gray-600">
+          Als je inlogt met je Google-account dan gebruikt de app uitsluitend de data van de 6
+          kalenders voor de meetingruimtes. Als je een boeking toevoegt dan creëert de app
+          onderliggend een kalenderevent. Voor de rest wordt er geen kalenderdata gebruikt op wat
+          voor manier dan ook. Alle code is Open Source en beschikbaar op{" "}
+          <a
+            className="underline underline-offset-3 transition hover:text-gray-900"
+            href="https://github.com/atimmer/startup-rooms"
+            rel="noreferrer"
+            target="_blank"
+          >
+            GitHub
+          </a>
+          .
         </p>
 
-        <div className="mt-8">
-          <ConnectGoogleButton className="w-full sm:w-auto" label="Sign in with Google" />
-        </div>
+        <ConnectGoogleButton className="mt-5 w-full" label="Sign in with Google" />
 
-        <div className="mt-6 flex justify-center gap-4 text-sm text-stone-400">
-          <Link
-            className="underline underline-offset-4 transition hover:text-stone-200"
-            to="/privacy"
-          >
-            Privacybeleid
-          </Link>
-          <Link
-            className="underline underline-offset-4 transition hover:text-stone-200"
-            to="/voorwaarden"
-          >
-            Voorwaarden
-          </Link>
+        <div className="mt-4 border-t border-gray-100 pt-3.5 text-xs leading-5 text-gray-500">
+          <div className="flex gap-3.5">
+            <Link
+              className="underline underline-offset-3 transition hover:text-gray-900"
+              to="/privacy"
+            >
+              Privacybeleid
+            </Link>
+            <Link
+              className="underline underline-offset-3 transition hover:text-gray-900"
+              to="/voorwaarden"
+            >
+              Voorwaarden
+            </Link>
+          </div>
+          <p className="mt-1.5 text-gray-400">
+            Built and operated by{" "}
+            <a
+              className="underline underline-offset-3 transition hover:text-gray-900"
+              href="https://24letters.com/"
+              rel="noreferrer"
+              target="_blank"
+            >
+              24letters
+            </a>
+            .
+          </p>
         </div>
       </div>
     </div>
@@ -800,18 +831,6 @@ export function SchedulePage() {
             <path d="M21 12a9 9 0 1 1-6.219-8.56" />
           </svg>
         </div>
-
-        {!isAuthenticated ? (
-          <div className="border-b border-amber-200 bg-amber-50 px-3 py-3 md:px-6">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <ConnectGoogleButton className="w-full md:w-auto" />
-              <p className="max-w-2xl text-sm leading-6 text-amber-950">
-                Startup Rooms lets you preview the booking board before login and uses Google only
-                to authenticate you and perform room calendar actions you choose.
-              </p>
-            </div>
-          </div>
-        ) : null}
 
         <header className="flex items-center justify-between gap-2 border-b border-gray-200 px-3 py-2 md:px-6 md:py-4">
           <div className="flex min-w-0 items-center gap-2 md:gap-3">
