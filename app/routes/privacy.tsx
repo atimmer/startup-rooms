@@ -30,7 +30,7 @@ export default function PrivacyRoute() {
           >
             {CONTACT_EMAIL}
           </a>
-          . Laatst bijgewerkt: 3 september 2026.
+          . Laatst bijgewerkt: 2026-09-03.
         </p>
       </section>
 
