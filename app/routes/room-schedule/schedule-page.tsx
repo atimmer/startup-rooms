@@ -27,7 +27,7 @@ import {
   getTodayAmsterdamDate,
   parseDateTimeLocal,
 } from "./schedule-time";
-import { clearClientScheduleCacheForUrl } from "./schedule-client-cache";
+import { clearClientScheduleCache, clearClientScheduleCacheForUrl } from "./schedule-client-cache";
 import type { ActionData, LoaderData, ModalState, ScheduleBooking } from "./schedule-types";
 
 type FormSubmitEvent = Parameters<NonNullable<ComponentProps<typeof Form>["onSubmit"]>>[0];
@@ -103,19 +103,21 @@ function LoggedOutScheduleOverlay() {
           het beheren van de meetingruimtes. Ik mis overzicht en gemak. Dat heeft deze app wel.
         </p>
         <p className="mt-3 text-sm leading-[1.6] text-gray-600">
-          Als je inlogt met je Google-account dan gebruikt de app uitsluitend de data van de 6
-          kalenders voor de meetingruimtes. Als je een boeking toevoegt dan creëert de app
-          onderliggend een kalenderevent. Voor de rest wordt er geen kalenderdata gebruikt op wat
-          voor manier dan ook. Alle code is Open Source en beschikbaar op{" "}
-          <a
+          Als je doorgaat, ontvangt Nijmegen Startup Rooms je e-mailadres en toegang tot evenementen
+          in de zes gedeelde vergaderruimteagenda&apos;s. De app gebruikt dit alleen om de planning
+          te tonen en om op jouw verzoek boekingen in Google Calendar aan te maken, te wijzigen of
+          te verwijderen. Een boeking in een gedeelde agenda is zichtbaar voor anderen die al
+          toegang tot die agenda hebben. Vercel verwerkt gegevens alleen als hostingprovider. Lees
+          het{" "}
+          <Link
             className="underline underline-offset-3 transition hover:text-gray-900"
-            href="https://github.com/atimmer/startup-rooms"
-            rel="noreferrer"
-            target="_blank"
+            to="/privacy"
           >
-            GitHub
-          </a>
-          .
+            privacybeleid
+          </Link>{" "}
+          voor beveiliging, bewaartermijnen en verwijderen. Om de zes agenda&apos;s te vinden leest
+          de app eerst tijdelijk de namen, ID&apos;s en toegangsrollen van alle Google-agenda&apos;s
+          waarop je bent geabonneerd; andere agenda&apos;s en hun evenementen worden niet gebruikt.
         </p>
 
         <ConnectGoogleButton className="mt-5 w-full" label="Sign in with Google" />
@@ -1162,6 +1164,19 @@ export function SchedulePage() {
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <p>Gebruik op eigen risico. Data loopt via Google Calendar.</p>
             <div className="flex items-center gap-4">
+              {isAuthenticated ? (
+                <Form
+                  action="/auth/logout"
+                  method="post"
+                  onSubmit={() => {
+                    clearClientScheduleCache();
+                  }}
+                >
+                  <button className="transition hover:text-gray-900" type="submit">
+                    Uitloggen en Google-koppeling verwijderen
+                  </button>
+                </Form>
+              ) : null}
               <Link className="transition hover:text-gray-900" to="/privacy">
                 Privacybeleid
               </Link>
