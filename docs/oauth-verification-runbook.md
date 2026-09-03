@@ -8,11 +8,13 @@ Use the existing Chrome session for `anton@24letters.com`. Never enter, request,
 
 Keep the five approved scopes: `openid`, `email`, `profile`, `calendar.events`, and `calendar.calendarlist.readonly`. Do not ask Anton to reconsider them. Use `anton@24letters.com` as the contact. The app is open source at https://github.com/atimmer/startup-rooms; there are no test credentials.
 
-Make each run idempotent. Store this JSON at `~/.local/state/startup-rooms-oauth/handled.json` and update it atomically:
+Make each run idempotent. From the repository root, store this JSON at `.artifacts/oauth-state/handled.json` and update it atomically:
 
 ```json
 {"handledEntryIds":[],"lastCheckTime":null}
 ```
+
+For each update, write the complete next state with `jq` to `.artifacts/oauth-state/handled.json.tmp`, validate that temporary file, then run `mv .artifacts/oauth-state/handled.json.tmp .artifacts/oauth-state/handled.json`. Do not add a cleanup trap; a failed validation may safely leave the ignored temporary file for inspection.
 
 Record an inbound entry ID only after its required action succeeds, or after classifying it as no-action. Always set `lastCheckTime` to the run's completion time. Never handle the same entry ID twice.
 
@@ -61,7 +63,7 @@ For a repository fix, edit only relevant files, run `pnpm presubmit`, commit onl
 1. Confirm the pushed commit is on `origin/main` and wait for the production deployment without starting a dev server.
 2. Run `curl -fsS https://startup-rooms.24letters.com/`, the changed URL, https://startup-rooms.24letters.com/privacy, and https://startup-rooms.24letters.com/voorwaarden as applicable. Check status, final URL, required visible text, and relevant security headers; never print cookies or tokens.
 3. Open the project's Verification Center at `/auth/verification` in the existing Chrome session. If Chrome asks for credentials or re-authentication, pause.
-4. Capture a screenshot showing project name and current verification status; save it under `~/.local/state/startup-rooms-oauth/`, not in the repository. Do not capture secrets.
+4. Capture a screenshot showing project name and current verification status; save it under `.artifacts/oauth-state/` relative to the repository root. This directory is gitignored. Do not capture secrets.
 5. Do not reply or resubmit until the live site, source, declared scopes, email claims, and Console agree.
 
 Use these exact Console pages: https://console.cloud.google.com/auth/overview?project=nijmegen-startup-rooms, https://console.cloud.google.com/auth/branding?project=nijmegen-startup-rooms, https://console.cloud.google.com/auth/audience?project=nijmegen-startup-rooms, https://console.cloud.google.com/auth/scopes?project=nijmegen-startup-rooms, and https://console.cloud.google.com/auth/verification?project=nijmegen-startup-rooms.
