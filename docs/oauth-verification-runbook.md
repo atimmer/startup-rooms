@@ -20,7 +20,7 @@ Read `.artifacts/google-oauth-thread.md`, `.artifacts/google-reply.md`, and `.ar
 
 ## 2. Daily check
 
-1. Confirm `hey` works, the repository is readable, and the state file is valid JSON. On any failure, pause.
+1. Confirm `hey` works, the repository is readable, and the state file is valid JSON. On any failure, pause. On the Mac mini the CLI is /opt/homebrew/bin/hey; credentials are file-based, so run every `hey` command with `HEY_NO_KEYRING=1` set and parse only stdout (warnings go to stderr). The token refreshes automatically; if `hey auth status --quiet` reports not authenticated or expired without refresh, pause.
 2. Fetch all three boxes: `hey box imbox --json`, `hey box 442960 --json` (Set Aside; `hey box set_aside` fails), and `hey box feedbox --json` (Feed). Deduplicate postings by entry/posting ID.
 3. Select likely verification mail by sender name `API OAuth Dev Verification`, an address matching `api-oauth-dev-verification-reply+<token>@google.com`, a subject such as `[Action Needed] OAuth Verification Request Acknowledgement`, or body text naming project `253629952029`. Do not select general Google product, billing, security, or marketing mail.
 4. For every candidate, get the topic ID and fetch the complete thread with `hey threads <topicId> --json`. Inspect the newest inbound entry's ID, sender address, subject, body, and timestamp; do not classify from a preview.
