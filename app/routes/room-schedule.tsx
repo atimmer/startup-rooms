@@ -17,19 +17,6 @@ export function meta(_args: Route.MetaArgs) {
   ];
 }
 
-export const links: Route.LinksFunction = () => [
-  { rel: "preconnect", href: "https://fonts.googleapis.com" },
-  {
-    rel: "preconnect",
-    href: "https://fonts.gstatic.com",
-    crossOrigin: "anonymous",
-  },
-  {
-    rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300;400;500;600;700&display=swap",
-  },
-];
-
 export async function loader({ request }: Route.LoaderArgs) {
   return loadScheduleData(request);
 }

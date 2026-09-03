@@ -798,7 +798,7 @@ export function SchedulePage() {
 
   return (
     <div
-      style={{ fontFamily: "'Source Sans 3', sans-serif" }}
+      style={{ fontFamily: "'Source Sans 3 Variable', sans-serif" }}
       className="relative flex min-h-screen flex-col overflow-hidden overscroll-y-contain bg-white text-gray-900"
     >
       <div
@@ -1204,7 +1204,7 @@ export function SchedulePage() {
       >
         {modalState ? (
           <DialogContent
-            style={{ fontFamily: "'Source Sans 3', sans-serif" }}
+            style={{ fontFamily: "'Source Sans 3 Variable', sans-serif" }}
             onOpenAutoFocus={(e) => {
               e.preventDefault();
             }}
