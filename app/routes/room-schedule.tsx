@@ -83,8 +83,8 @@ export function shouldRevalidate({
   return defaultShouldRevalidate;
 }
 
-export function headers({ loaderHeaders }: Route.HeadersArgs) {
-  return loaderHeaders;
+export function headers({ loaderHeaders, parentHeaders }: Route.HeadersArgs) {
+  return { ...Object.fromEntries(parentHeaders), ...Object.fromEntries(loaderHeaders) };
 }
 
 export default function RoomScheduleRoute() {
