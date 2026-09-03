@@ -4,10 +4,10 @@ import { CONTACT_EMAIL } from "~/data/legal";
 
 export function meta(_args: Route.MetaArgs) {
   return [
-    { title: "Algemene voorwaarden | Startup Rooms" },
+    { title: "Algemene voorwaarden | Nijmegen Startup Rooms" },
     {
       name: "description",
-      content: "Korte gebruiksvoorwaarden voor Startup Rooms.",
+      content: "Korte gebruiksvoorwaarden voor Nijmegen Startup Rooms.",
     },
   ];
 }
@@ -36,9 +36,9 @@ export default function TermsRoute() {
       <section>
         <h2 className="text-lg font-semibold text-stone-950">Gebruik op eigen risico</h2>
         <p className="mt-2">
-          Startup Rooms wordt aangeboden zonder garanties. We doen ons best om de app bruikbaar en
-          actueel te houden, maar we kunnen niet beloven dat alles altijd klopt, beschikbaar is of
-          zonder fouten werkt.
+          Nijmegen Startup Rooms wordt aangeboden zonder garanties. We doen ons best om de app
+          bruikbaar en actueel te houden, maar we kunnen niet beloven dat alles altijd klopt,
+          beschikbaar is of zonder fouten werkt.
         </p>
       </section>
 
@@ -55,7 +55,7 @@ export default function TermsRoute() {
         <h2 className="text-lg font-semibold text-stone-950">Afhankelijk van derden</h2>
         <p className="mt-2">
           De app gebruikt onder meer Google Calendar en draait op Vercel. Als een van die diensten
-          niet werkt of verandert, kan dat invloed hebben op Startup Rooms.
+          niet werkt of verandert, kan dat invloed hebben op Nijmegen Startup Rooms.
         </p>
         <p className="mt-2">
           Op het gebruik van Google-gegevens is ons{" "}

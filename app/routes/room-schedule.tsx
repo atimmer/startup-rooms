@@ -12,7 +12,7 @@ const MODAL_SEARCH_PARAM_KEYS = ["bookingId", "endLocal", "modal", "roomId", "st
 
 export function meta(_args: Route.MetaArgs) {
   return [
-    { title: "Meeting Rooms" },
+    { title: "Nijmegen Startup Rooms" },
     { name: "description", content: "Live room schedule for today." },
   ];
 }

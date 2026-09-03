@@ -20,7 +20,7 @@ export function LegalPage({ children, description, title }: LegalPageProps) {
 
         <section className="mt-6 rounded-[28px] border border-stone-200 bg-white px-6 py-8 shadow-[0_24px_80px_-48px_rgba(28,25,23,0.45)] md:px-10 md:py-10">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-stone-500">
-            Startup Rooms
+            Nijmegen Startup Rooms
           </p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-stone-950 md:text-4xl">
             {title}

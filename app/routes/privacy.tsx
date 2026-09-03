@@ -4,7 +4,7 @@ import { CONTACT_EMAIL } from "~/data/legal";
 
 export function meta(_args: Route.MetaArgs) {
   return [
-    { title: "Privacybeleid | Startup Rooms" },
+    { title: "Privacybeleid | Nijmegen Startup Rooms" },
     {
       name: "description",
       content: "In gewone taal uitgelegd welke gegevens Nijmegen Startup Rooms verwerkt.",
