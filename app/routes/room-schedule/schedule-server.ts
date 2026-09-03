@@ -1,6 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import type { calendar_v3 } from "googleapis";
-import { redirect } from "react-router";
+import { data, redirect } from "react-router";
 
 import { HOURS, ROOMS } from "../../data/rooms";
 import {
@@ -168,7 +168,7 @@ async function destroySessionAndReauthenticate(
   });
 }
 
-export async function loadScheduleData(request: Request): Promise<LoaderData | Response> {
+export async function loadScheduleData(request: Request) {
   const { commitSession, getSession, readGoogleSession } = await import("../../lib/session.server");
   const session = await getSession(request);
   const googleSession = readGoogleSession(session);
@@ -184,7 +184,6 @@ export async function loadScheduleData(request: Request): Promise<LoaderData | R
       bookings: emptyBookings,
       currentUserEmail: null,
       date: resolvedDate,
-      headers: null,
       isAuthenticated: false,
       isToday: resolvedDate === todayDate,
       roomCalendarIds: {},
@@ -266,18 +265,22 @@ export async function loadScheduleData(request: Request): Promise<LoaderData | R
     .flat()
     .sort((left: ScheduleBooking, right: ScheduleBooking) => left.startHour - right.startHour);
 
-  return {
-    bookings,
-    currentUserEmail: googleSession.googleUser.email,
-    date,
-    headers: {
-      "Set-Cookie": await commitSession(session),
+  return data(
+    {
+      bookings,
+      currentUserEmail: googleSession.googleUser.email,
+      date,
+      isAuthenticated: true,
+      isToday: date === todayDate,
+      roomCalendarIds,
+      roomCount: roomCalendars.length,
+    } satisfies LoaderData,
+    {
+      headers: {
+        "Set-Cookie": await commitSession(session),
+      },
     },
-    isAuthenticated: true,
-    isToday: date === todayDate,
-    roomCalendarIds,
-    roomCount: roomCalendars.length,
-  } satisfies LoaderData;
+  );
 }
 
 export async function mutateScheduleBooking(request: Request) {

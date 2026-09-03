@@ -1,9 +1,9 @@
-import type { loadScheduleData } from "./schedule-server";
+import type { LoaderData } from "./schedule-types";
 
 const MODAL_SEARCH_PARAM_KEYS = ["bookingId", "endLocal", "modal", "roomId", "startLocal"] as const;
 const CLIENT_CACHE_TIME_MS = 5 * 60_000;
 
-type ScheduleLoaderData = Awaited<ReturnType<typeof loadScheduleData>>;
+type ScheduleLoaderData = LoaderData | Response;
 
 interface ClientCacheEntry {
   cachedAt: number;

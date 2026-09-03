@@ -31,7 +31,6 @@ export interface LoaderData {
   bookings: ScheduleBooking[];
   currentUserEmail: string | null;
   date: string;
-  headers: { "Set-Cookie": string } | null;
   isAuthenticated: boolean;
   isToday: boolean;
   roomCalendarIds: Record<string, string>;
