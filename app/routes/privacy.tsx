@@ -16,7 +16,7 @@ export default function PrivacyRoute() {
   return (
     <LegalPage
       title="Privacybeleid"
-      description="Kort en simpel: we proberen zo min mogelijk gegevens te verwerken. Deze app draait op Vercel en gebruikt Google Calendar alleen als jij daar zelf voor kiest."
+      description="Kort en simpel: we verwerken zo min mogelijk gegevens. Deze app draait op Vercel en gebruikt Google Calendar alleen als jij daar zelf voor kiest."
     >
       <section>
         <h2 className="text-lg font-semibold text-stone-950">Wie we zijn</h2>
@@ -30,7 +30,8 @@ export default function PrivacyRoute() {
           >
             {CONTACT_EMAIL}
           </a>
-          . Laatst bijgewerkt: 2026-09-03.
+          . Laatst bijgewerkt: 3 september 2026. We passen dit beleid aan als de app verandert; de
+          datum bovenaan geeft de laatste wijziging aan.
         </p>
       </section>
 
@@ -47,21 +48,23 @@ export default function PrivacyRoute() {
           Welke gegevens we verwerken en waarvoor
         </h2>
         <p className="mt-2">
-          Als je alleen de site opent zonder Google te koppelen, verwerken we in de app zelf in
-          principe geen persoonlijke gegevens behalve wat technisch nodig is om de website te tonen.
+          Als je de site opent zonder Google te koppelen, plaatsen we geen sessiecookie en verwerken
+          we alleen de technische verzoekgegevens die onze hostingprovider registreert; zie “Hosting
+          via Vercel”.
         </p>
         <p className="mt-2">
           Wanneer je met Google koppelt, verwerkt Nijmegen Startup Rooms je e-mailadres,
           OAuth-toegangstoken en OAuth-vernieuwingstoken. De app leest van de zes gedeelde
           vergaderruimteagenda&apos;s de evenement-ID, titel, begin- en eindtijd en de naam en het
-          e-mailadres van de maker. We gebruiken deze gegevens uitsluitend om je te identificeren,
-          de kamerplanning te tonen, te bepalen welke boekingen van jou zijn en om op jouw verzoek
+          e-mailadres van de maker of organisator van elke boeking in die agenda&apos;s. We
+          gebruiken deze gegevens uitsluitend om je te identificeren, de planning van de
+          vergaderruimtes te tonen, te bepalen welke boekingen van jou zijn en om op jouw verzoek
           boekingen in Google Calendar aan te maken, te wijzigen, te verplaatsen of te verwijderen.
-          Zolang de huidige scopes blijven, ontvangen we ook je Google-naam en profielfoto en lezen
-          we tijdelijk metadata van alle agenda&apos;s waarop je bent geabonneerd, zoals agenda-ID,
-          naam en toegangsrol, uitsluitend om de zes kameragenda&apos;s te vinden; overige
-          agenda&apos;s en hun evenementen worden niet gebruikt. We hebben geen eigen account- of
-          boekingendatabase.
+          We ontvangen ook je naam en profielfoto van je Google-account. Om de zes
+          vergaderruimteagenda&apos;s te vinden, leest de app tijdelijk de metadata van alle
+          agenda&apos;s waarop je bent geabonneerd, zoals agenda-ID, naam en toegangsrol; overige
+          agenda&apos;s en hun evenementen worden niet gelezen, gebruikt of opgeslagen. We hebben
+          geen eigen account- of boekingendatabase.
         </p>
       </section>
 
@@ -85,8 +88,8 @@ export default function PrivacyRoute() {
           doorgegeven: (1) aan Google Calendar om op jouw verzoek de zichtbare plannings- en
           boekingsfuncties te leveren; (2) aan Vercel, onze hostingverwerker, voor zover dit
           technisch nodig is om de app veilig te hosten en verzoeken uit te voeren; en (3) wanneer
-          jij een boeking in een gedeelde kameragenda maakt of wijzigt, aan de andere personen die
-          via Google Calendar al toegang tot die gedeelde agenda hebben. We delen
+          jij een boeking in een gedeelde vergaderruimteagenda maakt of wijzigt, aan de andere
+          personen die via Google Calendar al toegang tot die gedeelde agenda hebben. We delen
           Google-gebruikersgegevens niet met andere derden, behalve als jij daar vooraf
           uitdrukkelijk toestemming voor geeft, als dit noodzakelijk is voor beveiliging, of als de
           wet ons daartoe verplicht. Medewerkers of opdrachtnemers lezen deze gegevens niet, behalve
@@ -116,14 +119,17 @@ export default function PrivacyRoute() {
           Bewaartermijnen, uitloggen en verwijderen
         </h2>
         <p className="mt-2">
-          Je e-mailadres en OAuth-tokens worden alleen in de versleutelde sessie bewaard, maximaal
-          30 dagen na je laatste geldige sessie. De browser bewaart opgehaalde planningsgegevens
-          alleen tijdelijk in het geheugen, maximaal vijf minuten; deze kopie verdwijnt ook bij
-          vernieuwen/sluiten van de pagina of bij uitloggen. Boekingen zelf staan in Google Calendar
-          en blijven daar bestaan totdat een bevoegde gebruiker ze verwijdert volgens het beleid van
-          de betreffende agenda. Met “Uitloggen en Google-koppeling verwijderen” trekken we de
-          Google-toegang in en verwijderen we direct de sessiegegevens en tijdelijke cache van dit
-          apparaat. Je kunt toegang ook intrekken via de{" "}
+          Je e-mailadres, naam, profielfoto-URL en OAuth-tokens worden alleen in de versleutelde
+          sessiecookie bewaard, maximaal 30 dagen na je laatste bezoek. De browser bewaart
+          opgehaalde planningsgegevens alleen tijdelijk in het geheugen, maximaal vijf minuten; deze
+          kopie verdwijnt ook bij vernieuwen/sluiten van de pagina of bij uitloggen. Boekingen zelf
+          staan in Google Calendar en blijven daar bestaan totdat een bevoegde gebruiker ze
+          verwijdert volgens het beleid van de betreffende agenda. Met “Uitloggen en
+          Google-koppeling verwijderen” vragen we Google direct om de toegang van deze app in te
+          trekken en verwijderen we meteen de sessiegegevens en tijdelijke cache van dit apparaat.
+          Lukt het intrekken niet, bijvoorbeeld omdat Google onbereikbaar is, dan word je nog steeds
+          uitgelogd; je kunt de toegang dan zelf intrekken via de pagina hieronder. Je kunt toegang
+          ook intrekken via de{" "}
           <a
             className="font-semibold text-stone-900 underline decoration-stone-300 underline-offset-4"
             href="https://myaccount.google.com/connections"
@@ -140,9 +146,11 @@ export default function PrivacyRoute() {
             {CONTACT_EMAIL}
           </a>
           ; gegevens die wij niet bewaren kunnen we niet verwijderen uit Google Calendar, maar we
-          helpen je bepalen waar je dit kunt doen. Technische hostinglogs bevatten geen OAuth-tokens
-          of agenda-inhoud en worden niet langer bewaard dan nodig voor beveiliging en
-          storingsanalyse.
+          helpen je bepalen waar je dit kunt doen. Vercel verwerkt daarnaast technische hostinglogs.
+          Deze logs bevatten geen OAuth-tokens en geen agenda-inhoud zoals titels of deelnemers; ze
+          bevatten wel standaard verzoekgegevens, waaronder de opgevraagde URL, die bij een geopende
+          boeking een evenement-ID, ruimte-ID en begin- en eindtijd kan bevatten. Ze worden niet
+          langer bewaard dan nodig voor beveiliging en storingsanalyse.
         </p>
       </section>
 
@@ -189,6 +197,18 @@ export default function PrivacyRoute() {
       </section>
 
       <section>
+        <h2 className="text-lg font-semibold text-stone-950">Jouw rechten en de AVG</h2>
+        <p className="mt-2">
+          We verwerken je gegevens op basis van je toestemming (de Google-koppeling) en ons
+          gerechtvaardigd belang om de app veilig te laten werken. Je hebt recht op inzage,
+          correctie en verwijdering van je gegevens en je kunt je toestemming altijd intrekken door
+          uit te loggen. Onze hostingprovider Vercel kan gegevens buiten de EU verwerken op basis
+          van de standaardcontractbepalingen van de Europese Commissie. Je kunt een klacht indienen
+          bij de Autoriteit Persoonsgegevens.
+        </p>
+      </section>
+
+      <section>
         <h2 className="text-lg font-semibold text-stone-950">Cookies</h2>
         <p className="mt-2">
           We gebruiken alleen een functionele, versleutelde sessiecookie om de Google-koppeling en
@@ -201,7 +221,9 @@ export default function PrivacyRoute() {
         <p className="mt-2">
           De app wordt gehost op Vercel. Daardoor kan Vercel technische serverlogs verwerken, zoals
           verzoekgegevens en IP-adressen, voor hosting, beveiliging en storingsanalyse. Deze logs
-          bevatten geen OAuth-tokens of agenda-inhoud.
+          bevatten geen OAuth-tokens en geen agenda-inhoud zoals titels of deelnemers; ze bevatten
+          wel standaard verzoekgegevens, waaronder de opgevraagde URL, die bij een geopende boeking
+          een evenement-ID, ruimte-ID en begin- en eindtijd kan bevatten.
         </p>
       </section>
 
