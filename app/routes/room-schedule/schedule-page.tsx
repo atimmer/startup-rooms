@@ -55,28 +55,48 @@ interface DragSelectionBounds {
   width: number;
 }
 
-function ConnectGoogleButton({
-  className,
-  label = "Connect Google",
-  tone = "accent",
-}: {
-  className?: string;
-  label?: string;
-  tone?: "accent" | "light";
-}) {
-  const usesAccentTone = tone === "accent";
+function GoogleLogo() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="absolute left-3 size-[18px] shrink-0"
+      focusable="false"
+      viewBox="0 0 18 18"
+    >
+      <path
+        d="M17.64 9.2045c0-.638-.0573-1.2518-.1636-1.8409H9v3.4818h4.8436c-.2086 1.125-.8427 2.0782-1.7963 2.7163v2.2582h2.9082c1.7027-1.5673 2.6845-3.8741 2.6845-6.6154z"
+        fill="#4285F4"
+      />
+      <path
+        d="M9 18c2.43 0 4.4673-.8059 5.9555-2.1801l-2.9082-2.2582c-.8059.54-1.8354.8591-3.0473.8591-2.3441 0-4.3286-1.5845-5.0373-3.7104H.9564v2.3327A8.9997 8.9997 0 0 0 9 18z"
+        fill="#34A853"
+      />
+      <path
+        d="M3.9627 10.7104A5.411 5.411 0 0 1 3.6818 9c0-.5936.1018-1.1709.2809-1.7104V4.9569H.9564A8.9977 8.9977 0 0 0 0 9c0 1.4518.3477 2.8273.9564 4.0431l3.0063-2.3327z"
+        fill="#FBBC05"
+      />
+      <path
+        d="M9 3.5795c1.3214 0 2.5077.4541 3.4423 1.3459l2.5814-2.5814C13.4632.8918 11.4259 0 9 0A8.9997 8.9997 0 0 0 .9564 4.9569l3.0063 2.3327C4.6714 5.1636 6.6559 3.5795 9 3.5795z"
+        fill="#EA4335"
+      />
+    </svg>
+  );
+}
 
+function GoogleSignInButton({ className }: { className?: string }) {
   return (
     <Button
       asChild
       className={cn(
-        "h-11 rounded-full px-5 text-sm font-semibold shadow-sm",
-        usesAccentTone ? undefined : "bg-white text-stone-950 hover:bg-stone-100",
+        "relative h-11 rounded-full border-[#747775] bg-white px-3 text-sm font-medium text-[#1f1f1f] shadow-none hover:bg-[#f8fafd]",
         className,
       )}
-      style={usesAccentTone ? { backgroundColor: ACCENT } : undefined}
+      variant="outline"
     >
-      <Link to="/auth/google">{label}</Link>
+      <Link to="/auth/google">
+        <GoogleLogo />
+        <span>Sign in with Google</span>
+      </Link>
     </Button>
   );
 }
@@ -120,7 +140,7 @@ function LoggedOutScheduleOverlay() {
           waarop je bent geabonneerd; andere agenda&apos;s en hun evenementen worden niet gebruikt.
         </p>
 
-        <ConnectGoogleButton className="mt-5 w-full" label="Sign in with Google" />
+        <GoogleSignInButton className="mt-5 w-full" />
 
         <div className="mt-4 border-t border-gray-100 pt-3.5 text-xs leading-5 text-gray-500">
           <div className="flex gap-3.5">
