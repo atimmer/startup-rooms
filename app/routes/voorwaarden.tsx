@@ -29,7 +29,7 @@ export default function TermsRoute() {
           >
             {CONTACT_EMAIL}
           </a>
-          . Laatst bijgewerkt: 2026-09-03.
+          . Laatst bijgewerkt: 3 september 2026.
         </p>
       </section>
 
@@ -45,17 +45,18 @@ export default function TermsRoute() {
       <section>
         <h2 className="text-lg font-semibold text-stone-950">Geen aansprakelijkheid</h2>
         <p className="mt-2">
-          Gebruik van deze app is volledig op eigen risico. De makers zijn niet aansprakelijk voor
-          schade, gemiste boekingen, dubbele reserveringen, dataverlies of andere gevolgen van het
-          gebruik van de app.
+          Voor zover wettelijk toegestaan is gebruik van deze app volledig op eigen risico en zijn
+          de makers niet aansprakelijk voor schade, gemiste boekingen, dubbele reserveringen,
+          dataverlies of andere gevolgen van het gebruik van de app. Deze uitsluiting geldt niet
+          voor opzet of bewuste roekeloosheid en niet voor je rechten onder de privacywetgeving.
         </p>
       </section>
 
       <section>
         <h2 className="text-lg font-semibold text-stone-950">Afhankelijk van derden</h2>
         <p className="mt-2">
-          De app gebruikt onder meer Google Calendar en draait op Vercel. Als een van die diensten
-          niet werkt of verandert, kan dat invloed hebben op Nijmegen Startup Rooms.
+          De app gebruikt Google Calendar en draait op Vercel. Als een van die diensten niet werkt
+          of verandert, kan dat invloed hebben op Nijmegen Startup Rooms.
         </p>
         <p className="mt-2">
           Op het gebruik van Google-gegevens is ons{" "}

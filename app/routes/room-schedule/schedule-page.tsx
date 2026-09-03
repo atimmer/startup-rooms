@@ -123,21 +123,21 @@ function LoggedOutScheduleOverlay() {
           het beheren van de meetingruimtes. Ik mis overzicht en gemak. Dat heeft deze app wel.
         </p>
         <p className="mt-3 text-sm leading-[1.6] text-gray-600">
-          Als je doorgaat, ontvangt Nijmegen Startup Rooms je e-mailadres en toegang tot evenementen
-          in de zes gedeelde vergaderruimteagenda&apos;s. De app gebruikt dit alleen om de planning
-          te tonen en om op jouw verzoek boekingen in Google Calendar aan te maken, te wijzigen of
-          te verwijderen. Een boeking in een gedeelde agenda is zichtbaar voor anderen die al
-          toegang tot die agenda hebben. Vercel verwerkt gegevens alleen als hostingprovider. Lees
-          het{" "}
+          Als je doorgaat, ontvangt Nijmegen Startup Rooms je e-mailadres, naam en profielfoto en
+          toegang tot evenementen in de zes gedeelde vergaderruimteagenda&apos;s. De app gebruikt
+          dit alleen om de planning te tonen en om op jouw verzoek boekingen in Google Calendar aan
+          te maken, te wijzigen of te verwijderen. Een boeking in een gedeelde agenda is zichtbaar
+          voor anderen die al toegang tot die agenda hebben. Om de zes vergaderruimteagenda&apos;s
+          te vinden leest de app eerst tijdelijk de namen, ID&apos;s en toegangsrollen van alle
+          Google-agenda&apos;s waarop je bent geabonneerd; andere agenda&apos;s en hun evenementen
+          worden niet gebruikt. Vercel verwerkt gegevens alleen als hostingprovider. Lees het{" "}
           <Link
             className="underline underline-offset-3 transition hover:text-gray-900"
             to="/privacy"
           >
             privacybeleid
           </Link>{" "}
-          voor beveiliging, bewaartermijnen en verwijderen. Om de zes agenda&apos;s te vinden leest
-          de app eerst tijdelijk de namen, ID&apos;s en toegangsrollen van alle Google-agenda&apos;s
-          waarop je bent geabonneerd; andere agenda&apos;s en hun evenementen worden niet gebruikt.
+          voor beveiliging, bewaartermijnen en verwijderen.
         </p>
 
         <GoogleSignInButton className="mt-5 w-full" />
