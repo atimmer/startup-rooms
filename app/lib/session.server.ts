@@ -1,4 +1,5 @@
-import { createCookieSessionStorage } from "react-router";
+import { createCookie, createCookieSessionStorage } from "react-router";
+import type { Cookie } from "react-router";
 
 import { env } from "./env.server";
 
@@ -46,16 +47,99 @@ function isGoogleSessionTokens(value: unknown): value is GoogleSessionTokens {
   );
 }
 
-const sessionStorage = createCookieSessionStorage({
-  cookie: {
-    httpOnly: true,
-    maxAge: 60 * 60 * 24 * 30,
-    name: "__session",
-    path: "/",
-    sameSite: "lax",
-    secrets: [env.sessionSecret],
-    secure: process.env.NODE_ENV === "production",
+function isSessionCookieData(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+async function deriveEncryptionKey(secret: string) {
+  const keyBytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(secret));
+
+  return crypto.subtle.importKey("raw", keyBytes, "AES-GCM", false, ["decrypt", "encrypt"]);
+}
+
+export async function encryptSessionValue(
+  value: Record<string, unknown>,
+  secret = env.sessionSecret,
+) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveEncryptionKey(secret);
+  const plaintext = new TextEncoder().encode(JSON.stringify(value));
+  const encrypted = new Uint8Array(
+    await crypto.subtle.encrypt(
+      {
+        name: "AES-GCM",
+        iv,
+      },
+      key,
+      plaintext,
+    ),
+  );
+  const payload = new Uint8Array(iv.length + encrypted.length);
+
+  payload.set(iv);
+  payload.set(encrypted, iv.length);
+
+  return Buffer.from(payload).toString("base64url");
+}
+
+export async function decryptSessionValue(value: string, secret = env.sessionSecret) {
+  try {
+    const payload = Uint8Array.from(Buffer.from(value, "base64url"));
+
+    if (payload.length <= 12) {
+      return {};
+    }
+
+    const key = await deriveEncryptionKey(secret);
+    const decrypted = await crypto.subtle.decrypt(
+      {
+        name: "AES-GCM",
+        iv: payload.slice(0, 12),
+      },
+      key,
+      payload.slice(12),
+    );
+    const parsed: unknown = JSON.parse(new TextDecoder().decode(decrypted));
+
+    return isSessionCookieData(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+const signedCookie = createCookie("__session", {
+  httpOnly: true,
+  maxAge: 60 * 60 * 24 * 30,
+  path: "/",
+  sameSite: "lax",
+  secrets: [env.sessionSecret],
+  secure: process.env.NODE_ENV === "production",
+});
+
+const encryptedCookie = {
+  get expires() {
+    return signedCookie.expires;
   },
+  isSigned: signedCookie.isSigned,
+  name: signedCookie.name,
+  async parse(cookieHeader: string | null, options?: Parameters<typeof signedCookie.parse>[1]) {
+    const encryptedValue: unknown = await signedCookie.parse(cookieHeader, options);
+
+    return typeof encryptedValue === "string" ? decryptSessionValue(encryptedValue) : {};
+  },
+  async serialize(value: unknown, options?: Parameters<typeof signedCookie.serialize>[1]) {
+    if (value === "") {
+      return signedCookie.serialize(value, options);
+    }
+
+    const encryptedValue = isSessionCookieData(value) ? await encryptSessionValue(value) : "";
+
+    return signedCookie.serialize(encryptedValue, options);
+  },
+} satisfies Cookie;
+
+const sessionStorage = createCookieSessionStorage({
+  cookie: encryptedCookie,
 });
 
 export async function getSession(request: Request) {
