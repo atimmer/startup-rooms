@@ -11,8 +11,8 @@ Do **not** resubmit yet. The two 2026-08-27 findings are valid, and fixing only 
 ### P0 — blockers before resubmission
 
 1. Replace the privacy policy with complete, explicit disclosures for access/use, sharing, protection, retention/deletion, Limited Use, and AI/ML (draft below).
-2. Encrypt OAuth access/refresh tokens at rest before claiming that they are encrypted. The current React Router cookie is HMAC-signed/base64-encoded, not encrypted.
-3. Add a visible “Uitloggen en Google-koppeling verwijderen” control that revokes the Google grant/token and destroys the local session; document both this and Google Account revocation.
+2. Deploy and verify the newly committed AES-GCM session-cookie encryption and security headers before claiming encryption on the live policy. The live deployment fetched during this audit still predates those commits.
+3. Add a visible “Uitloggen en Google-koppeling verwijderen” control. The backend now revokes the Google grant/token and destroys the local session, but no UI invokes it; document both this and Google Account revocation.
 4. Make the disclosure immediately above “Sign in with Google” accurate: the app currently reads the user's whole Calendar List metadata before filtering, and also requests/stores profile data. State access, use, and sharing there—not only in `/privacy`.
 5. Minimize scopes: remove unused `profile`; preferably configure the six stable calendar IDs and remove `calendar.calendarlist.readonly`. If Calendar List discovery stays, disclose it and justify why fixed IDs cannot work.
 
@@ -86,15 +86,15 @@ Do **not** resubmit yet. The two 2026-08-27 findings are valid, and fixing only 
 
 **Google requires:** reasonable protection against unauthorized access/use/loss/disclosure, secure modern transport, encryption at rest, and OAuth access/refresh tokens encrypted at rest ([User Data Policy](https://developers.google.com/terms/api-services-user-data-policy#maintain_a_secure_operating_environment), [Workspace policy](https://developers.google.com/workspace/workspace-api-user-data-developer-policy#maintain_a_secure_operating_environment)). The privacy guide asks for concrete mechanisms, not “we take security seriously.”
 
-**Current:** live HTTPS has HSTS; OAuth uses a state value; the cookie is `HttpOnly`, `Secure` in production, `SameSite=Lax`, and HMAC-signed. However, `createCookieSessionStorage` base64-encodes and signs its contents—it does not encrypt them—while the cookie contains access/refresh tokens and profile data. There is no database, which reduces exposure.
+**Current:** live HTTPS has HSTS; OAuth uses a state value; the cookie is `HttpOnly`, `Secure` in production, `SameSite=Lax`, and HMAC-signed. The latest source now wraps the session payload in authenticated AES-GCM encryption and adds baseline response security headers. There is no database, which reduces exposure. Those commits were not yet present in the live response fetched during this audit, so production compliance is not proven.
 
-**Fix:** simplest compatible design is authenticated encryption of the cookie payload (for example AES-256-GCM with separately managed/rotatable key material); alternatively store encrypted tokens server-side and put only a random session ID in the cookie. Keep TLS/HSTS and flags, prevent sensitive request/response logging, rotate/restrict secrets, and add the security paragraph only after deployment.
+**Fix:** deploy the encrypted-cookie and header changes; run a production round-trip test proving a session still works and the cookie payload is unreadable without the secret. Confirm `SESSION_SECRET` has high entropy, restricted access, and a rotation procedure. Keep TLS/HSTS and flags, prevent sensitive request/response logging, and add the security paragraph only after deployment. A server-side encrypted token store plus opaque session ID remains the stronger alternative.
 
 ### 7. Retention and deletion — GAP
 
 **Google requires:** disclose retention and deletion and honor deletion requests; Workspace requires user help explaining how users manage/delete app data ([privacy guide](https://support.google.com/cloud/answer/13806988), [Workspace notice/control](https://developers.google.com/workspace/workspace-api-user-data-developer-policy#transparent_and_accurate_notice_and_control)).
 
-**Current:** policy says session cookie max 30 days or earlier logout/browser deletion. It does not cover the five-minute client memory cache, calendar-event lifetime, token revocation, deletion requests, or Vercel metadata. `/auth/logout` destroys the cookie, but no visible UI invokes it and it does not revoke the Google grant.
+**Current:** policy says session cookie max 30 days or earlier logout/browser deletion. It does not cover the five-minute client memory cache, calendar-event lifetime, token revocation, deletion requests, or Vercel metadata. The latest `/auth/logout` source revokes the refresh/access token and destroys the cookie even if revocation fails, but no visible UI invokes it and the change is not yet verified live.
 
 **Fix:** add visible disconnect/revoke, clear memory cache on disconnect, document Google Account → third-party connections as a second route, add monitored contact email, and publish the retention paragraph below. Confirm Vercel's configured log retention before stating a number for technical logs.
 
@@ -211,7 +211,7 @@ If Calendar List remains, add: “Om de zes agenda's te vinden leest de app eers
 ## Human decisions before implementation/resubmission
 
 1. Choose a monitored public privacy/support email (recommended: a role address such as `privacy@24letters.com`; use `anton@24letters.com` only if it is the intended public support channel).
-2. Choose token storage: encrypted cookie (smallest change) or encrypted server-side store plus opaque session ID.
+2. Confirm the newly implemented encrypted-cookie design is the intended production token storage and deploy it; otherwise choose an encrypted server-side store plus opaque session ID.
 3. Choose room discovery: configured stable calendar IDs (recommended; removes one sensitive scope) or retain Calendar List and accept fuller disclosure/justification.
 4. Choose reviewer access: actual shared calendars, cloned safe test calendars, or dedicated test account/deployment.
 5. Decide whether to self-host the font or disclose Google Fonts.
