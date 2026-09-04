@@ -3,6 +3,8 @@ import type { calendar_v3 } from "googleapis";
 import { data, redirect } from "react-router";
 
 import { HOURS, ROOMS } from "../../data/rooms";
+import { findCalendarBookingConflict } from "./schedule-conflict-server";
+import type { BookingConflictEvent, BookingConflictResult } from "./schedule-conflicts";
 import {
   GOOGLE_CALENDAR_TIME_ZONE,
   clampHour,
@@ -149,11 +151,55 @@ function buildRoomCalendarIds(roomCalendars: RoomCalendarEntry[]) {
   }, {});
 }
 
-function buildActionError(error: string, defaultValues: ModalValues) {
+function buildActionError(
+  error: string,
+  defaultValues: ModalValues,
+  suggestion?: ActionData["suggestion"],
+) {
   return {
     defaultValues,
     error,
+    suggestion,
   } satisfies ActionData;
+}
+
+function formatConflictDescription(event: BookingConflictEvent) {
+  const start = formatDateTimeLocalInTimeZone(event.start, GOOGLE_CALENDAR_TIME_ZONE).replace(
+    "T",
+    " ",
+  );
+  const end = formatDateTimeLocalInTimeZone(event.end, GOOGLE_CALENDAR_TIME_ZONE).replace("T", " ");
+  const title = event.title?.trim();
+
+  return title ? `booking “${title}” (${start}–${end})` : `booking (${start}–${end})`;
+}
+
+function buildConflictActionError(
+  conflict: Exclude<BookingConflictResult, { kind: "ok" }>,
+  defaultValues: ModalValues,
+) {
+  if (conflict.kind === "conflict-other") {
+    return buildActionError(
+      `This time overlaps ${formatConflictDescription(conflict.event)}, created by someone else.`,
+      defaultValues,
+    );
+  }
+
+  if (conflict.kind === "conflict-own-no-suggestion") {
+    return buildActionError(
+      `This time overlaps your ${formatConflictDescription(conflict.event)}. Edit or delete that booking instead.`,
+      defaultValues,
+    );
+  }
+
+  return buildActionError(
+    "This time overlaps one of your bookings. Use the suggested times below or edit the existing booking.",
+    defaultValues,
+    {
+      endLocal: formatDateTimeLocalInTimeZone(conflict.suggestedEnd, GOOGLE_CALENDAR_TIME_ZONE),
+      startLocal: formatDateTimeLocalInTimeZone(conflict.suggestedStart, GOOGLE_CALENDAR_TIME_ZONE),
+    },
+  );
 }
 
 async function destroySessionAndRedirect(
@@ -440,13 +486,37 @@ export async function mutateScheduleBooking(request: Request) {
       );
     }
 
+    const originalCalendarId = originalRoomId ? roomCalendarIds[originalRoomId] : undefined;
+
+    if (intent === "update" && (!bookingId || !originalCalendarId)) {
+      return buildActionError(
+        "The existing booking could not be identified for editing.",
+        defaultValues,
+      );
+    }
+
+    const requestedStart = startDateTime.toInstant().toString();
+    const requestedEnd = endDateTime.toInstant().toString();
+    const conflict = await findCalendarBookingConflict(
+      calendar,
+      targetCalendarId,
+      requestedStart,
+      requestedEnd,
+      googleSession.googleUser.email,
+      intent === "update" ? bookingId : undefined,
+    );
+
+    if (conflict.kind !== "ok") {
+      return buildConflictActionError(conflict, defaultValues);
+    }
+
     const requestBody = {
       end: {
-        dateTime: endDateTime.toInstant().toString(),
+        dateTime: requestedEnd,
         timeZone: GOOGLE_CALENDAR_TIME_ZONE,
       },
       start: {
-        dateTime: startDateTime.toInstant().toString(),
+        dateTime: requestedStart,
         timeZone: GOOGLE_CALENDAR_TIME_ZONE,
       },
       summary: title,
@@ -458,15 +528,6 @@ export async function mutateScheduleBooking(request: Request) {
         requestBody,
       });
     } else {
-      const originalCalendarId = originalRoomId ? roomCalendarIds[originalRoomId] : undefined;
-
-      if (!bookingId || !originalCalendarId) {
-        return buildActionError(
-          "The existing booking could not be identified for editing.",
-          defaultValues,
-        );
-      }
-
       if (originalCalendarId === targetCalendarId) {
         await calendar.events.update({
           calendarId: targetCalendarId,
