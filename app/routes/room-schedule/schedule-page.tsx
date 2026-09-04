@@ -237,6 +237,8 @@ export function SchedulePage() {
   const [now, setNow] = useState(getCurrentTimeOffset);
   const [pendingIntent, setPendingIntent] = useState<"create" | "delete" | "update" | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const startInputRef = useRef<HTMLInputElement>(null);
+  const endInputRef = useRef<HTMLInputElement>(null);
   const hasAutoScrolledRef = useRef(false);
   const focusRefreshFrameRef = useRef<number | null>(null);
   const pullStartYRef = useRef<number | null>(null);
@@ -816,6 +818,18 @@ export function SchedulePage() {
     }
   }
 
+  function useSuggestedTimes() {
+    const suggestion = actionData?.suggestion;
+
+    if (!suggestion || !startInputRef.current || !endInputRef.current) {
+      return;
+    }
+
+    startInputRef.current.value = suggestion.startLocal;
+    endInputRef.current.value = suggestion.endLocal;
+    startInputRef.current.focus();
+  }
+
   return (
     <div
       style={{ fontFamily: "'Source Sans 3 Variable', sans-serif" }}
@@ -1314,6 +1328,7 @@ export function SchedulePage() {
                   id="startLocal"
                   defaultValue={modalState.values.startLocal}
                   name="startLocal"
+                  ref={startInputRef}
                   required
                   type="datetime-local"
                 />
@@ -1325,15 +1340,38 @@ export function SchedulePage() {
                   id="endLocal"
                   defaultValue={modalState.values.endLocal}
                   name="endLocal"
+                  ref={endInputRef}
                   required
                   type="datetime-local"
                 />
               </div>
 
               {actionData?.error ? (
-                <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+                <p
+                  className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700"
+                  role="alert"
+                >
                   {actionData.error}
                 </p>
+              ) : null}
+
+              {actionData?.suggestion ? (
+                <div className="mb-4 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-3 text-sm text-indigo-950">
+                  <p className="font-medium">Suggested available time</p>
+                  <p className="mt-1 text-indigo-800">
+                    {actionData.suggestion.startLocal.replace("T", " ")} –{" "}
+                    {actionData.suggestion.endLocal.replace("T", " ")}
+                  </p>
+                  <Button
+                    className="mt-3"
+                    onClick={useSuggestedTimes}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    Use suggested times
+                  </Button>
+                </div>
               ) : null}
 
               {modalState.kind === "edit" ? (
