@@ -4,8 +4,8 @@ import type { Route } from "./+types/auth.google.callback";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const [
-    { exchangeCodeForTokens },
-    { commitSession, getSession, readGoogleSession, readOAuthState },
+    { exchangeCodeForTokens, hasRequiredGoogleCalendarScopes },
+    { commitSession, destroySession, getSession, readGoogleSession, readOAuthState },
   ] = await Promise.all([import("../lib/google.server"), import("../lib/session.server")]);
   const requestUrl = new URL(request.url);
   const error = requestUrl.searchParams.get("error");
@@ -30,6 +30,15 @@ export async function loader({ request }: Route.LoaderArgs) {
   }
 
   const result = await exchangeCodeForTokens(code);
+
+  if (!hasRequiredGoogleCalendarScopes(result.tokens.scope)) {
+    return redirect("/auth/google/permissions?missing=1", {
+      headers: {
+        "Set-Cookie": await destroySession(session),
+      },
+    });
+  }
+
   const refreshToken =
     result.tokens.refreshToken ?? existingGoogleSession?.googleTokens.refreshToken;
 

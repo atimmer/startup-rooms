@@ -156,16 +156,35 @@ function buildActionError(error: string, defaultValues: ModalValues) {
   } satisfies ActionData;
 }
 
-async function destroySessionAndReauthenticate(
+async function destroySessionAndRedirect(
   session: Awaited<ReturnType<typeof import("../../lib/session.server").getSession>>,
+  location: string,
 ) {
   const { destroySession } = await import("../../lib/session.server");
 
-  return redirect("/auth/google", {
+  return redirect(location, {
     headers: {
       "Set-Cookie": await destroySession(session),
     },
   });
+}
+
+async function getGoogleAuthErrorRedirect(
+  error: unknown,
+  session: Awaited<ReturnType<typeof import("../../lib/session.server").getSession>>,
+) {
+  const { isGoogleAuthInsufficientScopesError, isGoogleAuthInvalidGrantError } =
+    await import("../../lib/google.server");
+
+  if (isGoogleAuthInvalidGrantError(error)) {
+    return destroySessionAndRedirect(session, "/auth/google");
+  }
+
+  if (isGoogleAuthInsufficientScopesError(error)) {
+    return destroySessionAndRedirect(session, "/auth/google/permissions?missing=1");
+  }
+
+  return null;
 }
 
 export async function loadScheduleData(request: Request) {
@@ -200,10 +219,10 @@ export async function loadScheduleData(request: Request) {
       googleSession.googleTokens,
     ));
   } catch (error) {
-    const { isGoogleAuthInvalidGrantError } = await import("../../lib/google.server");
+    const authRedirect = await getGoogleAuthErrorRedirect(error, session);
 
-    if (isGoogleAuthInvalidGrantError(error)) {
-      return destroySessionAndReauthenticate(session);
+    if (authRedirect) {
+      return authRedirect;
     }
 
     throw error;
@@ -368,10 +387,10 @@ export async function mutateScheduleBooking(request: Request) {
         },
       });
     } catch (error) {
-      const { isGoogleAuthInvalidGrantError } = await import("../../lib/google.server");
+      const authRedirect = await getGoogleAuthErrorRedirect(error, session);
 
-      if (isGoogleAuthInvalidGrantError(error)) {
-        return destroySessionAndReauthenticate(session);
+      if (authRedirect) {
+        return authRedirect;
       }
 
       const message =
@@ -474,10 +493,10 @@ export async function mutateScheduleBooking(request: Request) {
       },
     });
   } catch (error) {
-    const { isGoogleAuthInvalidGrantError } = await import("../../lib/google.server");
+    const authRedirect = await getGoogleAuthErrorRedirect(error, session);
 
-    if (isGoogleAuthInvalidGrantError(error)) {
-      return destroySessionAndReauthenticate(session);
+    if (authRedirect) {
+      return authRedirect;
     }
 
     const message =

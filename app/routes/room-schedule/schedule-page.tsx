@@ -93,7 +93,7 @@ function GoogleSignInButton({ className }: { className?: string }) {
       )}
       variant="outline"
     >
-      <Link to="/auth/google">
+      <Link to="/auth/google/permissions">
         <GoogleLogo />
         <span>Sign in with Google</span>
       </Link>

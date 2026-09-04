@@ -3,13 +3,12 @@ import { google } from "googleapis";
 
 import { env } from "./env.server";
 
-const googleScopes = [
-  "openid",
-  "email",
-  "profile",
+const requiredGoogleCalendarScopes = [
   "https://www.googleapis.com/auth/calendar.events",
   "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
 ] as const;
+
+const googleScopes = ["openid", "email", "profile", ...requiredGoogleCalendarScopes] as const;
 
 interface StoredGoogleTokens {
   accessToken?: string;
@@ -51,6 +50,16 @@ export function getGoogleAuthUrl(state: string) {
     scope: [...googleScopes],
     state,
   });
+}
+
+export function hasRequiredGoogleCalendarScopes(scope: string | undefined) {
+  if (!scope) {
+    return false;
+  }
+
+  const grantedScopes = new Set(scope.split(/\s+/));
+
+  return requiredGoogleCalendarScopes.every((requiredScope) => grantedScopes.has(requiredScope));
 }
 
 export async function exchangeCodeForTokens(code: string) {
@@ -134,4 +143,11 @@ export function isGoogleAuthInvalidGrantError(error: unknown) {
   }
 
   return readStringProperty(response.data, "error") === "invalid_grant";
+}
+
+export function isGoogleAuthInsufficientScopesError(error: unknown) {
+  return (
+    error instanceof Error &&
+    error.message.toLowerCase().includes("insufficient authentication scopes")
+  );
 }
