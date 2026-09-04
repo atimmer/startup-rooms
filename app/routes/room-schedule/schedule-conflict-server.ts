@@ -3,6 +3,7 @@ import type { calendar_v3 } from "googleapis";
 
 import { findBookingConflict } from "./schedule-conflicts";
 import type { BookingConflictEvent, BookingConflictResult } from "./schedule-conflicts";
+import { resolveCreatorEmail } from "./schedule-event";
 import { GOOGLE_CALENDAR_TIME_ZONE } from "./schedule-time";
 
 function resolveEventInstant(value: calendar_v3.Schema$EventDateTime | undefined) {
@@ -51,7 +52,7 @@ export async function findCalendarBookingConflict(
       }
 
       events.push({
-        creatorEmail: event.creator?.email ?? null,
+        creatorEmail: resolveCreatorEmail(event),
         end,
         id: event.id,
         start,

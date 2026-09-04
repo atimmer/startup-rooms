@@ -5,6 +5,7 @@ import { data, redirect } from "react-router";
 import { HOURS, ROOMS } from "../../data/rooms";
 import { findCalendarBookingConflict } from "./schedule-conflict-server";
 import type { BookingConflictEvent, BookingConflictResult } from "./schedule-conflicts";
+import { resolveCreatorEmail } from "./schedule-event";
 import {
   GOOGLE_CALENDAR_TIME_ZONE,
   clampHour,
@@ -51,18 +52,6 @@ function resolveCreator(event: calendar_v3.Schema$Event): string {
   }
 
   return "Google Calendar";
-}
-
-function resolveCreatorEmail(event: calendar_v3.Schema$Event): string | null {
-  const candidates = [event.creator?.email, event.organizer?.email];
-
-  for (const candidate of candidates) {
-    if (candidate) {
-      return candidate;
-    }
-  }
-
-  return null;
 }
 
 function normalizeCalendarSummary(value: string) {
@@ -503,7 +492,7 @@ export async function mutateScheduleBooking(request: Request) {
       requestedStart,
       requestedEnd,
       googleSession.googleUser.email,
-      intent === "update" ? bookingId : undefined,
+      intent === "update" && originalCalendarId === targetCalendarId ? bookingId : undefined,
     );
 
     if (conflict.kind !== "ok") {
