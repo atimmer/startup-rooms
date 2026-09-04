@@ -50,6 +50,10 @@ export interface ModalValues {
 export interface ActionData {
   defaultValues?: ModalValues;
   error: string;
+  suggestion?: {
+    endLocal: string;
+    startLocal: string;
+  };
 }
 
 export type ModalState =
