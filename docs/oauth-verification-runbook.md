@@ -11,7 +11,7 @@ Keep the five approved scopes: `openid`, `email`, `profile`, `calendar.events`, 
 Make each run idempotent. From the repository root, store this JSON at `.artifacts/oauth-state/handled.json` and update it atomically:
 
 ```json
-{"handledEntryIds":[],"lastCheckTime":null}
+{ "handledEntryIds": [], "lastCheckTime": null }
 ```
 
 For each update, write the complete next state with `jq` to `.artifacts/oauth-state/handled.json.tmp`, validate that temporary file, then run `mv .artifacts/oauth-state/handled.json.tmp .artifacts/oauth-state/handled.json`. Do not add a cleanup trap; a failed validation may safely leave the ignored temporary file for inspection.
@@ -31,28 +31,28 @@ Read `.artifacts/google-oauth-thread.md`, `.artifacts/google-reply.md`, and `.ar
 
 ## 3. Classification
 
-| Class | Evidence | Action |
-| --- | --- | --- |
-| Approved | Explicitly says verification is approved/complete | Mark seen and handled; report approval. Do not change Console or send mail unless Google explicitly requests confirmation. |
-| Needs action | Lists findings, missing information, or required fixes | Follow sections 4–6. |
-| Info only | Acknowledgement, review-progress update, or timing notice with no request | Mark seen and handled; do not reply or resubmit. |
-| Automated closure | Says the request/ticket was closed, expired, cancelled, or `Please do not reply` | Mark seen and handled; never reply. Report whether Console still shows the fresh request under review; pause if status conflicts. |
-| Unrelated Google mail | Not about OAuth verification for project `253629952029` | Take no OAuth action; mark handled in this run's state only if it was initially selected as a candidate. |
+| Class                 | Evidence                                                                         | Action                                                                                                                            |
+| --------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Approved              | Explicitly says verification is approved/complete                                | Mark seen and handled; report approval. Do not change Console or send mail unless Google explicitly requests confirmation.        |
+| Needs action          | Lists findings, missing information, or required fixes                           | Follow sections 4–6.                                                                                                              |
+| Info only             | Acknowledgement, review-progress update, or timing notice with no request        | Mark seen and handled; do not reply or resubmit.                                                                                  |
+| Automated closure     | Says the request/ticket was closed, expired, cancelled, or `Please do not reply` | Mark seen and handled; never reply. Report whether Console still shows the fresh request under review; pause if status conflicts. |
+| Unrelated Google mail | Not about OAuth verification for project `253629952029`                          | Take no OAuth action; mark handled in this run's state only if it was initially selected as a candidate.                          |
 
 ## 4. Handle a needs-action finding
 
 Read the finding once carefully, compare it with `.artifacts/oauth-verification-audit.md`, and make only the smallest accurate fix. Preserve unrelated working-tree changes.
 
-| Finding | Concrete fix path |
-| --- | --- |
-| Privacy policy | Update `app/routes/privacy.tsx`; keep https://startup-rooms.24letters.com/privacy public, accurate, and identical to the Branding URL. Cover access/use, sharing, protection, retention/deletion, Limited Use, AI/ML, operator, and contact. |
-| Homepage | Update `app/routes/room-schedule/schedule-page.tsx` and metadata in `app/routes/room-schedule.tsx`; clearly state purpose, Google Calendar use, operator, and links to privacy and terms. |
-| Branding | Open `/auth/branding`; ensure the name is `Nijmegen Startup Rooms`, contact is `anton@24letters.com`, and URLs are homepage, `/privacy`, and `/voorwaarden`. Any consent-screen change requires a new video: pause for Anton before changing or resubmitting. |
-| Scopes | Inspect `app/lib/google.server.ts` and open `/auth/scopes`; retain exactly the five decided scopes. Explain `calendar.events` for viewing and managing events and `calendar.calendarlist.readonly` for finding the named shared calendars. A requested scope change is a product decision and consent-screen change: pause. |
-| Demo video | Use https://youtu.be/JOwnrFYVZGI only if the submitted consent screen and behavior are unchanged. If Google rejects it or any consent-screen detail changed, pause for Anton to make a new video. |
-| In-app testing | Reply that reviewers can use any Google account, create calendars with the six exact names below, then sign in at the homepage; no allowlisting or credentials are needed. If Google insists on credentials or access to Anton's account, pause. |
-| Use case | Answer in email or the verification questionnaire: the app shows and manages bookings for six shared meeting-room calendars; it reads calendar-list metadata to find them and reads/writes events solely for that user-facing function. |
-| Data protection | Verify implementation before describing it: `app/lib/session.server.ts`, `app/routes/auth.logout.tsx`, security headers in `app/root.tsx`, and `app/routes/privacy.tsx`. State only mechanisms that are live; never claim unverified encryption, logging, retention, or revocation behavior. |
+| Finding         | Concrete fix path                                                                                                                                                                                                                                                                                                           |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Privacy policy  | Update `app/routes/privacy.tsx`; keep https://startup-rooms.24letters.com/privacy public, accurate, and identical to the Branding URL. Cover access/use, sharing, protection, retention/deletion, Limited Use, AI/ML, operator, and contact.                                                                                |
+| Homepage        | Update `app/routes/room-schedule/schedule-page.tsx` and metadata in `app/routes/room-schedule.tsx`; clearly state purpose, Google Calendar use, operator, and links to privacy and terms.                                                                                                                                   |
+| Branding        | Open `/auth/branding`; ensure the name is `Nijmegen Startup Rooms`, contact is `anton@24letters.com`, and URLs are homepage, `/privacy`, and `/voorwaarden`. Any consent-screen change requires a new video: pause for Anton before changing or resubmitting.                                                               |
+| Scopes          | Inspect `app/lib/google.server.ts` and open `/auth/scopes`; retain exactly the five decided scopes. Explain `calendar.events` for viewing and managing events and `calendar.calendarlist.readonly` for finding the named shared calendars. A requested scope change is a product decision and consent-screen change: pause. |
+| Demo video      | Use https://youtu.be/JOwnrFYVZGI only if the submitted consent screen and behavior are unchanged. If Google rejects it or any consent-screen detail changed, pause for Anton to make a new video.                                                                                                                           |
+| In-app testing  | Reply that reviewers can use any Google account, create calendars with the six exact names below, then sign in at the homepage; no allowlisting or credentials are needed. If Google insists on credentials or access to Anton's account, pause.                                                                            |
+| Use case        | Answer in email or the verification questionnaire: the app shows and manages bookings for six shared meeting-room calendars; it reads calendar-list metadata to find them and reads/writes events solely for that user-facing function.                                                                                     |
+| Data protection | Verify implementation before describing it: `app/lib/session.server.ts`, `app/routes/auth.logout.tsx`, security headers in `app/root.tsx`, and `app/routes/privacy.tsx`. State only mechanisms that are live; never claim unverified encryption, logging, retention, or revocation behavior.                                |
 
 Use these exact calendar names: `Stadsschouwburg (1-6 personen)`, `De Vereeniging (1-40 personen)`, `Lindenberg (1-4 personen)`, `LUX (1-6 personen)`, `Merleyn (1-4 personen)`, and `Doornroosje (1-6 personen)` (source: `app/data/rooms.ts`).
 
