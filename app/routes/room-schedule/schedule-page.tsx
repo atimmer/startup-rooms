@@ -93,7 +93,7 @@ function GoogleSignInButton({ className }: { className?: string }) {
       )}
       variant="outline"
     >
-      <Link to="/auth/google/permissions">
+      <Link to="/auth/google">
         <GoogleLogo />
         <span>Sign in with Google</span>
       </Link>
@@ -101,44 +101,75 @@ function GoogleSignInButton({ className }: { className?: string }) {
   );
 }
 
-function LoggedOutScheduleOverlay() {
+function MissingPermissionsContent() {
+  return (
+    <>
+      <h2 className="text-xl font-semibold tracking-tight text-gray-900 md:text-[22px]">
+        Google-permissies nodig
+      </h2>
+
+      <p className="mt-3 text-sm leading-[1.6] text-gray-600">
+        Niet alle benodigde permissies zijn aangevinkt. Om meetingruimtes te boeken heeft de app
+        toegang nodig tot je agenda&apos;s. Google vraagt je die permissies handmatig aan te vinken.
+        Probeer het opnieuw en kies in het Google-scherm ‘Alles selecteren’:
+      </p>
+
+      <figure className="mt-4 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+        <img
+          alt="Google-toestemmingsscherm met een pijl naar de optie Alles selecteren"
+          className="h-auto w-full"
+          height="1170"
+          src="/google-calendar-permissions.png"
+          width="1044"
+        />
+      </figure>
+    </>
+  );
+}
+
+function IntroContent() {
+  return (
+    <>
+      <h2 className="text-xl font-semibold tracking-tight text-gray-900 md:text-[22px]">
+        Nijmegen Startup Rooms
+      </h2>
+
+      <p className="mt-3 text-sm leading-[1.6] text-gray-600">
+        Deze app maakt het eenvoudig om meetingruimtes te boeken en in te zien bij{" "}
+        <a
+          className="underline underline-offset-3 transition hover:text-gray-900"
+          href="https://startupnijmegen.nl/"
+          rel="noreferrer"
+          target="_blank"
+        >
+          Startup Nijmegen
+        </a>
+        . Ik heb deze app gemaakt omdat ik zelf vind dat Google Calendar geen fijne UI heeft voor
+        het beheren van de meetingruimtes. Ik mis overzicht en gemak. Dat heeft deze app wel.
+      </p>
+      <p className="mt-3 text-sm leading-[1.6] text-gray-600">
+        Als je doorgaat, ontvangt Nijmegen Startup Rooms je e-mailadres, naam en profielfoto en
+        toegang tot evenementen in de zes gedeelde vergaderruimteagenda&apos;s. De app gebruikt dit
+        alleen om de planning te tonen en om op jouw verzoek boekingen in Google Calendar aan te
+        maken, te wijzigen of te verwijderen. Een boeking in een gedeelde agenda is zichtbaar voor
+        anderen die al toegang tot die agenda hebben. Om de zes vergaderruimteagenda&apos;s te
+        vinden leest de app eerst tijdelijk de namen, ID&apos;s en toegangsrollen van alle
+        Google-agenda&apos;s waarop je bent geabonneerd; andere agenda&apos;s en hun evenementen
+        worden niet gebruikt. Vercel verwerkt gegevens alleen als hostingprovider. Lees het{" "}
+        <Link className="underline underline-offset-3 transition hover:text-gray-900" to="/privacy">
+          privacybeleid
+        </Link>{" "}
+        voor beveiliging, bewaartermijnen en verwijderen.
+      </p>
+    </>
+  );
+}
+
+function LoggedOutScheduleOverlay({ hasMissingPermissions }: { hasMissingPermissions: boolean }) {
   return (
     <div className="absolute inset-0 z-30 flex items-center justify-center bg-gradient-to-b from-stone-950/[0.18] via-stone-950/40 via-55% to-stone-950/55 p-4 backdrop-blur-[3px]">
       <div className="w-full max-w-[400px] rounded-xl border border-gray-200 bg-white p-6 text-left shadow-lg md:p-7">
-        <h2 className="text-xl font-semibold tracking-tight text-gray-900 md:text-[22px]">
-          Nijmegen Startup Rooms
-        </h2>
-
-        <p className="mt-3 text-sm leading-[1.6] text-gray-600">
-          Deze app maakt het eenvoudig om meetingruimtes te boeken en in te zien bij{" "}
-          <a
-            className="underline underline-offset-3 transition hover:text-gray-900"
-            href="https://startupnijmegen.nl/"
-            rel="noreferrer"
-            target="_blank"
-          >
-            Startup Nijmegen
-          </a>
-          . Ik heb deze app gemaakt omdat ik zelf vind dat Google Calendar geen fijne UI heeft voor
-          het beheren van de meetingruimtes. Ik mis overzicht en gemak. Dat heeft deze app wel.
-        </p>
-        <p className="mt-3 text-sm leading-[1.6] text-gray-600">
-          Als je doorgaat, ontvangt Nijmegen Startup Rooms je e-mailadres, naam en profielfoto en
-          toegang tot evenementen in de zes gedeelde vergaderruimteagenda&apos;s. De app gebruikt
-          dit alleen om de planning te tonen en om op jouw verzoek boekingen in Google Calendar aan
-          te maken, te wijzigen of te verwijderen. Een boeking in een gedeelde agenda is zichtbaar
-          voor anderen die al toegang tot die agenda hebben. Om de zes vergaderruimteagenda&apos;s
-          te vinden leest de app eerst tijdelijk de namen, ID&apos;s en toegangsrollen van alle
-          Google-agenda&apos;s waarop je bent geabonneerd; andere agenda&apos;s en hun evenementen
-          worden niet gebruikt. Vercel verwerkt gegevens alleen als hostingprovider. Lees het{" "}
-          <Link
-            className="underline underline-offset-3 transition hover:text-gray-900"
-            to="/privacy"
-          >
-            privacybeleid
-          </Link>{" "}
-          voor beveiliging, bewaartermijnen en verwijderen.
-        </p>
+        {hasMissingPermissions ? <MissingPermissionsContent /> : <IntroContent />}
 
         <GoogleSignInButton className="mt-5 w-full" />
 
@@ -1191,7 +1222,11 @@ export function SchedulePage() {
             </div>
           </div>
 
-          {!isAuthenticated ? <LoggedOutScheduleOverlay /> : null}
+          {!isAuthenticated ? (
+            <LoggedOutScheduleOverlay
+              hasMissingPermissions={searchParams.get("auth") === "missing-permissions"}
+            />
+          ) : null}
         </div>
 
         <footer className="border-t border-gray-200 px-4 py-3 text-xs text-gray-500 md:px-6">

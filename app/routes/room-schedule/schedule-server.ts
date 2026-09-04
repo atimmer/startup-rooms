@@ -216,7 +216,7 @@ async function getGoogleAuthErrorRedirect(
   }
 
   if (isGoogleAuthInsufficientScopesError(error)) {
-    return destroySessionAndRedirect(session, "/auth/google/permissions?missing=1");
+    return destroySessionAndRedirect(session, "/?auth=missing-permissions");
   }
 
   return null;

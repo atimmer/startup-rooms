@@ -5,7 +5,6 @@ export default [
   route("privacy", "routes/privacy.tsx"),
   route("voorwaarden", "routes/voorwaarden.tsx"),
   route("auth/google", "routes/auth.google.tsx"),
-  route("auth/google/permissions", "routes/auth.google.permissions.tsx"),
   route("auth/google/callback", "routes/auth.google.callback.tsx"),
   route("auth/logout", "routes/auth.logout.tsx"),
 ] satisfies RouteConfig;

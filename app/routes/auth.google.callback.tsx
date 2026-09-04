@@ -32,7 +32,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   const result = await exchangeCodeForTokens(code);
 
   if (!hasRequiredGoogleCalendarScopes(result.tokens.scope)) {
-    return redirect("/auth/google/permissions?missing=1", {
+    return redirect("/?auth=missing-permissions", {
       headers: {
         "Set-Cookie": await destroySession(session),
       },
