@@ -2,8 +2,10 @@ import { type ComponentProps, forwardRef } from "react";
 
 import { cn } from "~/lib/utils";
 
+const NATIVE_PICKER_TYPES = new Set(["date", "datetime-local", "month", "time", "week"]);
+
 const Input = forwardRef<HTMLInputElement, ComponentProps<"input">>(
-  ({ className, type, ...props }, ref) => {
+  ({ className, type, onClick, ...props }, ref) => {
     return (
       <input
         type={type}
@@ -12,6 +14,24 @@ const Input = forwardRef<HTMLInputElement, ComponentProps<"input">>(
           className,
         )}
         ref={ref}
+        onClick={(event) => {
+          onClick?.(event);
+
+          const { nativeEvent } = event;
+          const isMouse =
+            nativeEvent instanceof PointerEvent && nativeEvent.pointerType === "mouse";
+
+          // Chrome 154 on Android stopped opening the native picker when the field itself is tapped.
+          if (event.defaultPrevented || isMouse || !type || !NATIVE_PICKER_TYPES.has(type)) {
+            return;
+          }
+
+          try {
+            event.currentTarget.showPicker();
+          } catch {
+            // Unsupported or blocked; the browser's default tap behavior still applies.
+          }
+        }}
         {...props}
       />
     );
