@@ -17,3 +17,10 @@ body {
     color-scheme: dark;
   }
 }
+
+/* Stop double-tap-to-zoom on mobile while keeping pinch-zoom. touch-action isn't inherited. */
+@layer base {
+  * {
+    touch-action: manipulation;
+  }
+}

@@ -10,7 +10,8 @@ const Input = forwardRef<HTMLInputElement, ComponentProps<"input">>(
       <input
         type={type}
         className={cn(
-          "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-gray-400",
+          // iOS Safari zooms in on focused fields with text smaller than 16px.
+          "w-full rounded-lg border border-gray-200 px-3 py-2 text-base md:text-sm text-gray-900 outline-none transition focus:border-gray-400",
           className,
         )}
         ref={ref}
