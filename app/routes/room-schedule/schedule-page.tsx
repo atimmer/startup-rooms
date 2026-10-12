@@ -258,7 +258,7 @@ function getDragSelectionBounds(selection: DragSelection, totalWidth: number): D
 }
 
 export function SchedulePage() {
-  const { bookings, currentUserEmail, date, isAuthenticated, roomCalendarIds, roomCount } =
+  const { bookings, currentUserEmail, date, isAuthenticated, isDemo, roomCalendarIds, roomCount } =
     useLoaderData<LoaderData>();
   const actionData = useActionData<ActionData>();
   const location = useLocation();
@@ -1231,7 +1231,14 @@ export function SchedulePage() {
 
         <footer className="border-t border-gray-200 px-4 py-3 text-xs text-gray-500 md:px-6">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <p>Gebruik op eigen risico. Data loopt via Google Calendar.</p>
+            {isDemo ? (
+              <p className="font-medium text-amber-700">
+                Preview met demodata. Boekingen staan alleen in deze browser, niet in Google
+                Calendar.
+              </p>
+            ) : (
+              <p>Gebruik op eigen risico. Data loopt via Google Calendar.</p>
+            )}
             <div className="flex items-center gap-4">
               {isAuthenticated ? (
                 <Form
@@ -1242,7 +1249,7 @@ export function SchedulePage() {
                   }}
                 >
                   <button className="transition hover:text-gray-900" type="submit">
-                    Uitloggen en Google-koppeling verwijderen
+                    {isDemo ? "Demodata wissen" : "Uitloggen en Google-koppeling verwijderen"}
                   </button>
                 </Form>
               ) : null}
