@@ -95,6 +95,12 @@ The app runs at `http://localhost:5173`.
 
 Open the root route and connect Google to load live room data.
 
+## Demo backend
+
+Vercel preview deployments (`VERCEL_ENV=preview`) don't talk to Google. You're signed in as a demo user, your bookings are stored in the session cookie (the latest 20), and a colleague's read-only bookings are seeded so conflicts can be tested. "Demodata wissen" in the footer clears them. No environment variables are needed.
+
+Run `DEMO_BACKEND=1 pnpm dev` to use the demo backend locally.
+
 ## Scripts
 
 - `pnpm dev` starts the local dev server.

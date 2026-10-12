@@ -5,6 +5,7 @@ import { findBookingConflict } from "./schedule-conflicts";
 import type { BookingConflictEvent, BookingConflictResult } from "./schedule-conflicts";
 import { resolveCreatorEmail } from "./schedule-event";
 import { GOOGLE_CALENDAR_TIME_ZONE } from "./schedule-time";
+import type { ScheduleCalendarClient } from "./schedule-types";
 
 function resolveEventInstant(value: calendar_v3.Schema$EventDateTime | undefined) {
   if (value?.dateTime) {
@@ -22,7 +23,7 @@ function resolveEventInstant(value: calendar_v3.Schema$EventDateTime | undefined
 }
 
 export async function findCalendarBookingConflict(
-  calendar: calendar_v3.Calendar,
+  calendar: ScheduleCalendarClient,
   calendarId: string,
   requestedStart: string,
   requestedEnd: string,

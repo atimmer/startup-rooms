@@ -1,4 +1,18 @@
+import type { calendar_v3 } from "googleapis";
+
 import type { Booking, ROOMS } from "../../data/rooms";
+
+/** The subset of the Google Calendar client the schedule uses, so previews can swap in a fake. */
+export interface ScheduleCalendarClient {
+  events: {
+    delete(params: calendar_v3.Params$Resource$Events$Delete): Promise<unknown>;
+    insert(params: calendar_v3.Params$Resource$Events$Insert): Promise<unknown>;
+    list(
+      params: calendar_v3.Params$Resource$Events$List,
+    ): Promise<{ data: calendar_v3.Schema$Events }>;
+    update(params: calendar_v3.Params$Resource$Events$Update): Promise<unknown>;
+  };
+}
 
 export interface GoogleSessionTokens {
   accessToken?: string;
@@ -32,6 +46,7 @@ export interface LoaderData {
   currentUserEmail: string | null;
   date: string;
   isAuthenticated: boolean;
+  isDemo: boolean;
   isToday: boolean;
   roomCalendarIds: Record<string, string>;
   roomCount: number;

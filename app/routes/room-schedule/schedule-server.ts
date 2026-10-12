@@ -1,8 +1,10 @@
 import { Temporal } from "@js-temporal/polyfill";
 import type { calendar_v3 } from "googleapis";
 import { data, redirect } from "react-router";
+import type { Session } from "react-router";
 
 import { HOURS, ROOMS } from "../../data/rooms";
+import { isDemoBackend } from "../../lib/demo-backend.server";
 import { findCalendarBookingConflict } from "./schedule-conflict-server";
 import type { BookingConflictEvent, BookingConflictResult } from "./schedule-conflicts";
 import { resolveCreatorEmail } from "./schedule-event";
@@ -23,6 +25,7 @@ import type {
   RoomCalendarCandidate,
   RoomCalendarEntry,
   ScheduleBooking,
+  ScheduleCalendarClient,
 } from "./schedule-types";
 
 const MODAL_SEARCH_PARAM_KEYS = ["bookingId", "endLocal", "modal", "roomId", "startLocal"] as const;
@@ -106,7 +109,25 @@ function getRoomCalendarEntries(roomCalendars: RoomCalendarCandidate[]) {
   return roomCalendars.filter(isRoomCalendarEntry);
 }
 
-async function loadRoomCalendars(googleTokens: GoogleSessionTokens) {
+async function loadRoomCalendars(
+  googleTokens: GoogleSessionTokens,
+  session: Session,
+): Promise<{
+  calendar: ScheduleCalendarClient;
+  refreshedTokens: GoogleSessionTokens;
+  roomCalendars: RoomCalendarEntry[];
+}> {
+  if (isDemoBackend) {
+    const { DEMO_ROOM_CALENDARS, createDemoCalendarClient } =
+      await import("./schedule-demo-calendar.server");
+
+    return {
+      calendar: createDemoCalendarClient(session),
+      refreshedTokens: googleTokens,
+      roomCalendars: DEMO_ROOM_CALENDARS,
+    };
+  }
+
   const { createAuthorizedCalendarClient } = await import("../../lib/google.server");
   const { calendar, refreshedTokens } = await createAuthorizedCalendarClient(googleTokens);
   const calendarListResponse = await calendar.calendarList.list({
@@ -222,10 +243,22 @@ async function getGoogleAuthErrorRedirect(
   return null;
 }
 
+async function readScheduleGoogleSession(session: Session) {
+  if (isDemoBackend) {
+    const { DEMO_GOOGLE_SESSION } = await import("./schedule-demo-calendar.server");
+
+    return DEMO_GOOGLE_SESSION;
+  }
+
+  const { readGoogleSession } = await import("../../lib/session.server");
+
+  return readGoogleSession(session);
+}
+
 export async function loadScheduleData(request: Request) {
-  const { commitSession, getSession, readGoogleSession } = await import("../../lib/session.server");
+  const { commitSession, getSession } = await import("../../lib/session.server");
   const session = await getSession(request);
-  const googleSession = readGoogleSession(session);
+  const googleSession = await readScheduleGoogleSession(session);
   const url = new URL(request.url);
   const dateParam = url.searchParams.get("date") ?? undefined;
   const todayDate = getTodayAmsterdamDate();
@@ -239,6 +272,7 @@ export async function loadScheduleData(request: Request) {
       currentUserEmail: null,
       date: resolvedDate,
       isAuthenticated: false,
+      isDemo: isDemoBackend,
       isToday: resolvedDate === todayDate,
       roomCalendarIds: {},
       roomCount: ROOMS.length,
@@ -252,6 +286,7 @@ export async function loadScheduleData(request: Request) {
   try {
     ({ calendar, refreshedTokens, roomCalendars } = await loadRoomCalendars(
       googleSession.googleTokens,
+      session,
     ));
   } catch (error) {
     const authRedirect = await getGoogleAuthErrorRedirect(error, session);
@@ -325,6 +360,7 @@ export async function loadScheduleData(request: Request) {
       currentUserEmail: googleSession.googleUser.email,
       date,
       isAuthenticated: true,
+      isDemo: isDemoBackend,
       isToday: date === todayDate,
       roomCalendarIds,
       roomCount: roomCalendars.length,
@@ -338,9 +374,9 @@ export async function loadScheduleData(request: Request) {
 }
 
 export async function mutateScheduleBooking(request: Request) {
-  const { commitSession, getSession, readGoogleSession } = await import("../../lib/session.server");
+  const { commitSession, getSession } = await import("../../lib/session.server");
   const session = await getSession(request);
-  const googleSession = readGoogleSession(session);
+  const googleSession = await readScheduleGoogleSession(session);
 
   if (!googleSession) {
     return redirect("/auth/google");
@@ -398,6 +434,7 @@ export async function mutateScheduleBooking(request: Request) {
     try {
       const { calendar, refreshedTokens, roomCalendars } = await loadRoomCalendars(
         googleSession.googleTokens,
+        session,
       );
       const roomCalendarIds = buildRoomCalendarIds(roomCalendars);
       const originalCalendarId = roomCalendarIds[originalRoomId];
@@ -464,6 +501,7 @@ export async function mutateScheduleBooking(request: Request) {
   try {
     const { calendar, refreshedTokens, roomCalendars } = await loadRoomCalendars(
       googleSession.googleTokens,
+      session,
     );
     const roomCalendarIds = buildRoomCalendarIds(roomCalendars);
     const targetCalendarId = roomCalendarIds[roomId];
