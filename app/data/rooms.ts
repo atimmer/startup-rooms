@@ -59,6 +59,13 @@ export const ROOMS: Room[] = [
     capacityLabel: "1-6 personen",
     color: "#B090FF",
   },
+  {
+    id: "toyota-aygo",
+    name: "Toyota Aygo",
+    calendarSummary: "Toyota Aygo",
+    capacityLabel: "Auto",
+    color: "#5B9CF5",
+  },
 ] as const;
 
 export const HOURS = Array.from({ length: 10 }, (_, i) => i + 8);

@@ -11,6 +11,7 @@ const ROOM_COLORS: Record<string, { bg: string; border: string; text: string }> 
   lux: { bg: "#E8FBF5", border: "#8DDEC9", text: "#0F766E" },
   merleyn: { bg: "#FFF7D6", border: "#FFD45F", text: "#92400E" },
   doornroosje: { bg: "#F1EAFE", border: "#B090FF", text: "#6D28D9" },
+  "toyota-aygo": { bg: "#EAF2FE", border: "#5B9CF5", text: "#1D4ED8" },
 };
 
 export function getRoomColor(roomId: string) {
