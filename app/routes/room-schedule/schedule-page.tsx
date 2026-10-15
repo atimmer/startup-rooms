@@ -17,6 +17,8 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { cn } from "~/lib/utils";
 import { HOURS, ROOMS, formatHour } from "../../data/rooms";
+import { MobileRoomLabel, MobileRoomLabelSwitcher } from "./mobile-room-label";
+import type { MobileRoomLabelVariant } from "./mobile-room-label";
 import { ACCENT, HEADER_HEIGHT, HOUR_WIDTH, ROW_HEIGHT, getRoomColor } from "./schedule-styles";
 import {
   createDefaultBookingValues,
@@ -279,6 +281,7 @@ export function SchedulePage() {
   const isPullRefreshPendingRef = useRef(false);
   const dragSelectionRef = useRef<DragSelection | null>(null);
   const [tooltipRoomId, setTooltipRoomId] = useState<string | null>(null);
+  const [mobileRoomLabelVariant, setMobileRoomLabelVariant] = useState<MobileRoomLabelVariant>(1);
   const [pullDistance, setPullDistance] = useState(0);
   const [isPullActive, setIsPullActive] = useState(false);
   const [isPullRefreshActive, setIsPullRefreshActive] = useState(false);
@@ -1014,14 +1017,22 @@ export function SchedulePage() {
                 >
                   <button
                     type="button"
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full md:h-3 md:w-3 md:cursor-default"
+                    aria-label={room.name}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full md:h-3 md:w-3 md:cursor-default"
                     onClick={(e) => {
                       e.stopPropagation();
                       setTooltipRoomId(isTooltipOpen ? null : room.id);
                     }}
                   >
+                    <span className="contents md:hidden">
+                      <MobileRoomLabel
+                        color={color}
+                        name={room.name}
+                        variant={mobileRoomLabelVariant}
+                      />
+                    </span>
                     <div
-                      className="h-3 w-3 shrink-0 rounded-full"
+                      className="hidden h-3 w-3 shrink-0 rounded-full md:block"
                       style={{ backgroundColor: color.border }}
                     />
                   </button>
@@ -1474,6 +1485,12 @@ export function SchedulePage() {
           </DialogContent>
         ) : null}
       </Dialog>
+      {import.meta.env.DEV ? (
+        <MobileRoomLabelSwitcher
+          variant={mobileRoomLabelVariant}
+          onChange={setMobileRoomLabelVariant}
+        />
+      ) : null}
     </div>
   );
 }
