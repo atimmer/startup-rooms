@@ -17,8 +17,6 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { cn } from "~/lib/utils";
 import { HOURS, ROOMS, formatHour } from "../../data/rooms";
-import { MobileRoomLabel, MobileRoomLabelSwitcher } from "./mobile-room-label";
-import type { MobileRoomLabelVariant } from "./mobile-room-label";
 import { ACCENT, HEADER_HEIGHT, HOUR_WIDTH, ROW_HEIGHT, getRoomColor } from "./schedule-styles";
 import {
   createDefaultBookingValues,
@@ -281,7 +279,6 @@ export function SchedulePage() {
   const isPullRefreshPendingRef = useRef(false);
   const dragSelectionRef = useRef<DragSelection | null>(null);
   const [tooltipRoomId, setTooltipRoomId] = useState<string | null>(null);
-  const [mobileRoomLabelVariant, setMobileRoomLabelVariant] = useState<MobileRoomLabelVariant>(1);
   const [pullDistance, setPullDistance] = useState(0);
   const [isPullActive, setIsPullActive] = useState(false);
   const [isPullRefreshActive, setIsPullRefreshActive] = useState(false);
@@ -1024,12 +1021,15 @@ export function SchedulePage() {
                       setTooltipRoomId(isTooltipOpen ? null : room.id);
                     }}
                   >
-                    <span className="contents md:hidden">
-                      <MobileRoomLabel
-                        color={color}
-                        name={room.name}
-                        variant={mobileRoomLabelVariant}
-                      />
+                    <span
+                      className="absolute inset-y-0 left-0 w-1.5 md:hidden"
+                      style={{ backgroundColor: color.border }}
+                    />
+                    <span
+                      className="pl-1 text-[13px] font-bold md:hidden"
+                      style={{ color: color.text }}
+                    >
+                      {room.shortName}
                     </span>
                     <div
                       className="hidden h-3 w-3 shrink-0 rounded-full md:block"
@@ -1485,12 +1485,6 @@ export function SchedulePage() {
           </DialogContent>
         ) : null}
       </Dialog>
-      {import.meta.env.DEV ? (
-        <MobileRoomLabelSwitcher
-          variant={mobileRoomLabelVariant}
-          onChange={setMobileRoomLabelVariant}
-        />
-      ) : null}
     </div>
   );
 }
