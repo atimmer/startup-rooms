@@ -30,7 +30,7 @@ export default function PrivacyRoute() {
           >
             {CONTACT_EMAIL}
           </a>
-          . Laatst bijgewerkt: 3 september 2026. We passen dit beleid aan als de app verandert; de
+          . Laatst bijgewerkt: 15 oktober 2026. We passen dit beleid aan als de app verandert; de
           datum bovenaan geeft de laatste wijziging aan.
         </p>
       </section>
@@ -54,17 +54,17 @@ export default function PrivacyRoute() {
         </p>
         <p className="mt-2">
           Wanneer je met Google koppelt, verwerkt Nijmegen Startup Rooms je e-mailadres,
-          OAuth-toegangstoken en OAuth-vernieuwingstoken. De app leest van de zes gedeelde
-          vergaderruimteagenda&apos;s de evenement-ID, titel, begin- en eindtijd en de naam en het
-          e-mailadres van de maker of organisator van elke boeking in die agenda&apos;s. We
-          gebruiken deze gegevens uitsluitend om je te identificeren, de planning van de
-          vergaderruimtes te tonen, te bepalen welke boekingen van jou zijn en om op jouw verzoek
-          boekingen in Google Calendar aan te maken, te wijzigen, te verplaatsen of te verwijderen.
-          We ontvangen ook je naam en profielfoto van je Google-account. Om de zes
-          vergaderruimteagenda&apos;s te vinden, leest de app tijdelijk de metadata van alle
-          agenda&apos;s waarop je bent geabonneerd, zoals agenda-ID, naam en toegangsrol; overige
-          agenda&apos;s en hun evenementen worden niet gelezen, gebruikt of opgeslagen. We hebben
-          geen eigen account- of boekingendatabase.
+          OAuth-toegangstoken en OAuth-vernieuwingstoken. De app leest van de zeven gedeelde
+          agenda&apos;s (zes vergaderruimtes en de Toyota Aygo) de evenement-ID, titel, begin- en
+          eindtijd en de naam en het e-mailadres van de maker of organisator van elke boeking in die
+          agenda&apos;s. We gebruiken deze gegevens uitsluitend om je te identificeren, de planning
+          van de vergaderruimtes en de auto te tonen, te bepalen welke boekingen van jou zijn en om
+          op jouw verzoek boekingen in Google Calendar aan te maken, te wijzigen, te verplaatsen of
+          te verwijderen. We ontvangen ook je naam en profielfoto van je Google-account. Om deze
+          zeven agenda&apos;s te vinden, leest de app tijdelijk de metadata van alle agenda&apos;s
+          waarop je bent geabonneerd, zoals agenda-ID, naam en toegangsrol; overige agenda&apos;s en
+          hun evenementen worden niet gelezen, gebruikt of opgeslagen. We hebben geen eigen account-
+          of boekingendatabase.
         </p>
       </section>
 
@@ -88,8 +88,8 @@ export default function PrivacyRoute() {
           doorgegeven: (1) aan Google Calendar om op jouw verzoek de zichtbare plannings- en
           boekingsfuncties te leveren; (2) aan Vercel, onze hostingverwerker, voor zover dit
           technisch nodig is om de app veilig te hosten en verzoeken uit te voeren; en (3) wanneer
-          jij een boeking in een gedeelde vergaderruimteagenda maakt of wijzigt, aan de andere
-          personen die via Google Calendar al toegang tot die gedeelde agenda hebben. We delen
+          jij een boeking in een gedeelde agenda maakt of wijzigt, aan de andere personen die via
+          Google Calendar al toegang tot die gedeelde agenda hebben. We delen
           Google-gebruikersgegevens niet met andere derden, behalve als jij daar vooraf
           uitdrukkelijk toestemming voor geeft, als dit noodzakelijk is voor beveiliging, of als de
           wet ons daartoe verplicht. Medewerkers of opdrachtnemers lezen deze gegevens niet, behalve
